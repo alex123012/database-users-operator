@@ -26,9 +26,14 @@ type UserSpec struct {
 	// If not provided - operator automatically substitutes this parameter with CR name
 	Name string `json:"name,omitempty"`
 
-	Cluster Cluster `json:"cluster"`
+	DatabaseConfig DatabaseConfig `json:"databaseConfig"`
 	// Privileges
 	Privileges []Privilege `json:"privileges,omitempty"`
+}
+
+type DatabaseConfig struct {
+	Name      string `json:"name"`
+	Namespace string `json:"namespace"`
 }
 
 type Privilege struct {
@@ -37,9 +42,6 @@ type Privilege struct {
 
 	// if used PrivilegeType from PrivilegeTypeMap in Privilege specify object to give Privilege to
 	On string `json:"on,omitempty"`
-
-	// Role for access
-	To string `json:"to"`
 }
 
 type PrivilegeType string
@@ -83,30 +85,6 @@ var PrivilegeTypeMap map[PrivilegeType]struct{} = map[PrivilegeType]struct{}{
 	SET:           {},
 	ALTERSYSTEM:   {},
 	ALLPRIVILEGES: {},
-}
-
-type Cluster struct {
-	Name        string      `json:"name"`
-	Namespace   string      `json:"namespace"`
-	Type        ClusterType `json:"type"`
-	Credentials Credentials `json:"credentials,omitempty"`
-}
-
-type ClusterType string
-
-const (
-	// PostgreSQL  ClusterType = "postgresql"
-	CockroachDB ClusterType = "cockroachdb"
-)
-
-type Credentials struct {
-	Username string `json:"username,omitempty"`
-	Secret   Secret `json:"secret,omitempty"`
-}
-
-type Secret struct {
-	Name      string `json:"name,omitempty"`
-	Namespace string `json:"namespace,omitempty"`
 }
 
 // UserStatus defines the observed state of User

@@ -1,16 +1,38 @@
-package controllers
+package utils
 
 import (
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
 	"os"
 	"path/filepath"
 )
+
+// Util funcs
+func ByteToCaPrivateKey(pemBytes []byte) (*rsa.PrivateKey, error) {
+	block, _ := pem.Decode(pemBytes)
+	key, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+	if err != nil {
+		return nil, err
+	}
+	return key, nil
+}
+
+func ByteToCaCert(pemBytes []byte) (*x509.Certificate, error) {
+	block, _ := pem.Decode(pemBytes)
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return nil, err
+	}
+	return cert, nil
+}
 
 func FilePathFromHome(path string) string {
 	return os.Getenv("HOME") + "/" + path
 }
 func CreateFileFromBytes(path string, buffer []byte) error {
 	dir := filepath.Dir(path)
-	err := os.MkdirAll(dir, 0666)
+	err := os.MkdirAll(dir, 0755)
 	if err != nil {
 		return err
 	}
