@@ -1,0 +1,19 @@
+apiVersion: auth.alex123012.com/v1alpha1
+kind: Config
+metadata:
+  name: cockroachdb
+spec:
+  databaseType: CockroachDB
+  cockroachDB:
+    host: cockroachdb-public
+    port: 26257
+    namespace: default
+    user: root
+    sslMode: verify-full
+    sslSecrets:
+      userSecret:
+        name: cockroachdb-root
+        namespace: default
+      caSecret:
+        name: cockroachdb-ca
+        namespace: default

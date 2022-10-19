@@ -1,22 +1,14 @@
-package certhook
+package main
 
 import (
-	"bytes"
 	"context"
-	cryptorand "crypto/rand"
-	"crypto/rsa"
-	"crypto/x509"
-	"crypto/x509/pkix"
-	"encoding/pem"
 	"flag"
 	"fmt"
 	"log"
-	"math/big"
-	"math/rand"
 	"os"
 	"strings"
-	"time"
 
+	"github.com/alex123012/k8s-database-users-operator/pkg/utils"
 	coreV1 "k8s.io/api/core/v1"
 
 	errors "k8s.io/apimachinery/pkg/api/errors"
@@ -58,36 +50,23 @@ func main() {
 		if err := checkAlreadyExists(ctx, clientset, clusterName, user); err != nil {
 			continue
 		}
-		cert, privKey, err := generateCertificate(user, caPrivKeyBytes, caCertBytes)
+		data, err := generateCertificate(user, caPrivKeyBytes, caCertBytes)
 		if err != nil {
 			log.Fatal(err)
 		}
 		log.Println("Generated cert-key pair")
 
-		if err := writeClientSecret(ctx, clientset, user, clusterName, cert, privKey, caCertBytes); err != nil {
+		if err := writeClientSecret(ctx, clientset, user, clusterName, data); err != nil {
 			log.Fatal(err)
 		}
-		// err = WriteBytesToFile(fmt.Sprintf("cockroachdb-certs/client.%s.crt", user), cert)
-		// if err != nil {
-		// 	return
-		// }
-
-		// err = WriteBytesToFile(fmt.Sprintf("cockroachdb-certs/client.%s.key", user), priv)
-		// if err != nil {
-		// 	return
-		// }
 	}
 }
-func writeClientSecret(ctx context.Context, clientset coreV1Types.SecretInterface, username, clusterName string, privKey, cert *bytes.Buffer, caCert []byte) error {
+func writeClientSecret(ctx context.Context, clientset coreV1Types.SecretInterface, username, clusterName string, data map[string][]byte) error {
 	secret := &coreV1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: fmt.Sprintf("%s-client-%s-user-tls", clusterName, username),
+			Name: fmt.Sprintf("%s-%s-user-tls", clusterName, username),
 		},
-		StringData: map[string]string{
-			"ca.crt":  string(caCert),
-			"tls.crt": cert.String(),
-			"tls.key": privKey.String(),
-		},
+		Data: data,
 		Type: coreV1.SecretTypeOpaque,
 	}
 	if _, err := clientset.Create(ctx, secret, metav1.CreateOptions{}); errors.IsAlreadyExists(err) {
@@ -115,7 +94,7 @@ func getCaKeyAndcert(ctx context.Context, clientset coreV1Types.SecretInterface,
 		return nil, nil, err
 	}
 
-	secretCaCert, err := clientset.Get(ctx, fmt.Sprintf("%s-node", clusterName), metav1.GetOptions{})
+	secretCaCert, err := clientset.Get(ctx, fmt.Sprintf("%s-root", clusterName), metav1.GetOptions{})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -129,92 +108,14 @@ func checkAlreadyExists(ctx context.Context, clientset coreV1Types.SecretInterfa
 	}
 	return nil
 }
-func generateCertificate(username string, caPrivKeyBytes, caCertBytes []byte) (*bytes.Buffer, *bytes.Buffer, error) {
-	// user cert config
-	caPrivKey, err := byteToCaPrivateKey(caPrivKeyBytes)
-	if err != nil {
-		return nil, nil, err
-	}
-	caCert, err := byteToCaCert(caCertBytes)
-	if err != nil {
-		return nil, nil, err
-	}
-	cert := &x509.Certificate{
-		SerialNumber: big.NewInt(rand.Int63()),
-		Subject: pkix.Name{
-			CommonName:   username,
-			Organization: []string{"Cockroach"},
-		},
-		NotBefore: time.Now(),
-		NotAfter:  time.Now().AddDate(1, 0, 0),
-	}
-
-	// user private key
-	privKey, err := rsa.GenerateKey(cryptorand.Reader, 4096)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// sign the user cert
-	CertBytes, err := x509.CreateCertificate(cryptorand.Reader, cert, caCert, &privKey.PublicKey, caPrivKey)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// PEM encode the user cert and key, ca cert
-	certPEM := new(bytes.Buffer)
-	err = pem.Encode(certPEM, &pem.Block{
-		Type:  "CERTIFICATE",
-		Bytes: CertBytes,
-	})
-
-	if err != nil {
-		return nil, nil, err
-	}
-
-	privKeyPEM := new(bytes.Buffer)
-	err = pem.Encode(privKeyPEM, &pem.Block{
-		Type:  "RSA PRIVATE KEY",
-		Bytes: x509.MarshalPKCS1PrivateKey(privKey),
-	})
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return certPEM, privKeyPEM, nil
-}
-
-// WritePem writes data in the file at the given path
-func WriteBytesToFile(filepath string, buffer *bytes.Buffer) error {
-	f, err := os.Create(filepath)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	f.Chmod(0600)
-	_, err = f.Write(buffer.Bytes())
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// Util funcs
-func byteToCaPrivateKey(pemBytes []byte) (*rsa.PrivateKey, error) {
-	block, _ := pem.Decode(pemBytes)
-	key, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+func generateCertificate(username string, caPrivKeyBytes, caCertBytes []byte) (map[string][]byte, error) {
+	caPrivKey, err := utils.ByteToCaPrivateKey(caPrivKeyBytes)
 	if err != nil {
 		return nil, err
 	}
-	return key, nil
-}
-
-func byteToCaCert(pemBytes []byte) (*x509.Certificate, error) {
-	block, _ := pem.Decode(pemBytes)
-	cert, err := x509.ParseCertificate(block.Bytes)
+	caCert, err := utils.ByteToCaCert(caCertBytes)
 	if err != nil {
 		return nil, err
 	}
-	return cert, nil
+	return utils.GenCockroachCertFromCA(username, caCert, caPrivKey)
 }

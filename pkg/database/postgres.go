@@ -1,20 +1,9 @@
-package controllers
+package database
 
 import (
-	// "database/sql"
-	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
-	// _ "github.com/lib/pq"
-)
-
-type Config interface {
-	String() string
-}
-type DBDriver string
-
-const (
-	DBDriverPostgres DBDriver = "postgres"
 )
 
 type SSLMode string
@@ -76,33 +65,17 @@ func (d *PostgresConfig) String() string {
 	return strings.Join(connSlice, " ")
 }
 
-func NewDBConnection(config Config, dbDriver DBDriver) (*sql.DB, error) {
-	db, err := sql.Open(string(dbDriver), config.String())
-	if err != nil {
-		return nil, err
-	}
+var ErrAlreadyExists = errors.New("already exists")
 
-	err = db.Ping()
-	if err != nil {
-		return nil, err
+func ProcessPostgresError(err error) error {
+	if err != nil && strings.Contains(strings.ToLower(err.Error()), "already exists") {
+		return ErrAlreadyExists
 	}
-	return db, err
+	return err
 }
-
-// func main() {
-// 	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
-// 		"password=%s dbname=%s sslmode=disable",
-// 		host, port, user, password, dbname)
-// 	db, err := sql.Open("postgres", psqlInfo)
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	defer db.Close()
-
-// 	err = db.Ping()
-// 	if err != nil {
-// 		panic(err)
-// 	}
-
-// 	fmt.Println("Successfully connected!")
-// }
+func IgnoreAlreadyExists(err error) error {
+	if errors.Is(err, ErrAlreadyExists) {
+		return nil
+	}
+	return err
+}

@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"context"
+	standardErrors "errors"
 	"fmt"
 
 	v1 "k8s.io/api/core/v1"
@@ -30,6 +31,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	authv1alpha1 "github.com/alex123012/k8s-database-users-operator/api/v1alpha1"
+	"github.com/alex123012/k8s-database-users-operator/pkg/database"
+	"github.com/alex123012/k8s-database-users-operator/pkg/utils"
 	"github.com/go-logr/logr"
 )
 
@@ -60,17 +63,33 @@ func (r *UserReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		// we'll ignore not-found errors, since they can't be fixed by an immediate
 		// requeue (we'll need to wait for a new notification), and we can get them
 		// on deleted requests.
-		logger.Error(err, "unable to fetch Job")
+		logger.Error(err, "unable to fetch User'"+userResource.Name+"' in namespace '"+userResource.Namespace+"'")
 		return ctrl.Result{}, err
 	}
-	if _, err := r.getV1Secret(ctx, userResource.Name, userResource.Namespace, logger); err == nil && errors.IsNotFound(err) {
 
-		err := r.createV1Secret(ctx, userResource, map[string]string{}, logger)
-		if err != nil {
-			logger.Error(err, "Failed to create new v1.Secret '"+userResource.Name+"' in namespace '"+userResource.Namespace+"'")
+	configResource := &authv1alpha1.Config{}
+	if err := r.Get(ctx, types.NamespacedName{
+		Name:      userResource.Spec.DatabaseConfig.Name,
+		Namespace: userResource.Spec.DatabaseConfig.Namespace,
+	}, configResource); err != nil {
+		logger.Error(err, "unable to fetch Config'"+userResource.Spec.DatabaseConfig.Name+"' in namespace '"+userResource.Spec.DatabaseConfig.Namespace+"'")
+		return ctrl.Result{}, err
+	}
+
+	if _, err := r.getV1Secret(ctx, userResource.Name, userResource.Namespace, logger); errors.IsNotFound(err) {
+
+		logger.Info("Creating DB user for User resource '" + userResource.Name + "' in namespace '" + userResource.Namespace + "'")
+		if err := r.processUser(ctx, userResource, configResource, logger); standardErrors.Is(err, database.ErrAlreadyExists) || errors.IsAlreadyExists(err) {
+			return ctrl.Result{}, nil
+		} else if err != nil {
+			logger.Error(err, "Failed to create db user for User resource '"+userResource.Name+"' in namespace '"+userResource.Namespace+"'")
 			return ctrl.Result{}, err
 		}
+
+	} else if err != nil {
+		logger.Error(err, "Failed to get new v1.Secret '"+userResource.Name+"' in namespace '"+userResource.Namespace+"'")
 	}
+
 	return ctrl.Result{}, nil
 }
 
@@ -88,15 +107,15 @@ func (r *UserReconciler) getV1Secret(ctx context.Context, name, namespace string
 	return secretV1Resource, err
 }
 
-func (r *UserReconciler) createV1Secret(ctx context.Context, userResource *authv1alpha1.User, data map[string]string, logger logr.Logger) error {
+func (r *UserReconciler) createV1Secret(ctx context.Context, userResource *authv1alpha1.User, data map[string][]byte, logger logr.Logger) error {
 	logger.Info("Creating a new v1.Secret '" + userResource.Name + "' in namespace '" + userResource.Namespace + "'")
 	secretV1Resource := &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      userResource.Name,
 			Namespace: userResource.Namespace,
 		},
-		StringData: data,
-		Type:       v1.SecretTypeOpaque,
+		Data: data,
+		Type: v1.SecretTypeOpaque,
 	}
 	if err := ctrl.SetControllerReference(userResource, secretV1Resource, r.Scheme); err != nil {
 		logger.Error(err, "Error setting reference for v1.Secret from'"+userResource.Name+"' in namespace '"+userResource.Namespace+"'")
@@ -105,59 +124,117 @@ func (r *UserReconciler) createV1Secret(ctx context.Context, userResource *authv
 	return r.Client.Create(ctx, secretV1Resource)
 }
 
-func (r *UserReconciler) createDBUser(ctx context.Context, userResource *authv1alpha1.User, logger logr.Logger) error {
-	switch userResource.Spec.Cluster.Type {
+func (r *UserReconciler) processUser(ctx context.Context, userResource *authv1alpha1.User, configResource *authv1alpha1.Config, logger logr.Logger) error {
+	switch configResource.Spec.DatabaseType {
 	case authv1alpha1.CockroachDB:
-		return r.createCockroachDBUser(ctx, userResource, logger)
+		cockroachConfig := &configResource.Spec.CockroachDB
+		err := r.createCockroachDBUser(ctx, userResource, cockroachConfig, logger)
+		if err != nil {
+			return err
+		}
+
+		logger.Info("Generating certificates for User resource '" + userResource.Name + "' in namespace '" + userResource.Namespace + "'")
+		data, err := r.generateCockroachDBCertificatesForUser(ctx, userResource, cockroachConfig, logger)
+		if err != nil {
+			logger.Error(err, "Failed to generate new certificates for User '"+userResource.Name+"' in namespace '"+userResource.Namespace+"'")
+			return err
+		}
+
+		logger.Info("Creating v1.Secret for User resource '" + userResource.Name + "' in namespace '" + userResource.Namespace + "'")
+		if err := r.createV1Secret(ctx, userResource, data, logger); err != nil {
+			logger.Error(err, "Failed to create new v1.Secret '"+userResource.Name+"' in namespace '"+userResource.Namespace+"'")
+			return err
+		}
+		return nil
 	default:
-		return fmt.Errorf("no Such ClusterType")
+		return fmt.Errorf("no Such database type")
 	}
+
 }
 
-func (r *UserReconciler) createCockroachDBUser(ctx context.Context, userResource *authv1alpha1.User, logger logr.Logger) error {
-	cockroachUserSecret, err := r.getV1Secret(
+func (r *UserReconciler) createCockroachDBUser(ctx context.Context, userResource *authv1alpha1.User, configResource *authv1alpha1.PostgreSQLConfig, logger logr.Logger) error {
+	cockroachRootSecret, err := r.getV1Secret(
 		ctx,
-		userResource.Spec.Cluster.Credentials.Secret.Name,
-		userResource.Spec.Cluster.Credentials.Secret.Namespace,
+		configResource.SSLCredentials.UserSecret.Name,
+		configResource.SSLCredentials.UserSecret.Namespace,
 		logger,
 	)
 	if err != nil {
 		return err
 	}
 
-	caFile := FilePathFromHome("cockroach-certs/ca.crt")
-	clientCert := FilePathFromHome(fmt.Sprintf("cockroach-certs/client.%s.crt", userResource.Spec.Cluster.Credentials.Username))
-	clientKey := FilePathFromHome(fmt.Sprintf("cockroach-certs/client.%s.key", userResource.Spec.Cluster.Credentials.Username))
+	caFile := utils.FilePathFromHome("cockroach-certs/ca.crt")
+	clientCert := utils.FilePathFromHome(fmt.Sprintf("cockroach-certs/client.%s.crt", configResource.User))
+	clientKey := utils.FilePathFromHome(fmt.Sprintf("cockroach-certs/client.%s.key", configResource.User))
 
-	if err := CreateFileFromBytes(caFile, cockroachUserSecret.Data["ca.crt"]); err != nil {
+	if err := utils.CreateFileFromBytes(caFile, cockroachRootSecret.Data["ca.crt"]); err != nil {
 		return err
 	}
-	if err := CreateFileFromBytes(clientCert, cockroachUserSecret.Data["tls.key"]); err != nil {
+	defer utils.DeleteFile(caFile)
+
+	if err := utils.CreateFileFromBytes(clientCert, cockroachRootSecret.Data["tls.crt"]); err != nil {
 		return err
 	}
-	if err := CreateFileFromBytes(clientKey, cockroachUserSecret.Data["tls.crt"]); err != nil {
+	defer utils.DeleteFile(clientCert)
+
+	if err := utils.CreateFileFromBytes(clientKey, cockroachRootSecret.Data["tls.key"]); err != nil {
 		return err
 	}
-	postgresConfig := NewPostgresConfig(
-		fmt.Sprintf("%s-public", userResource.Spec.Cluster.Name),
+	defer utils.DeleteFile(clientKey)
+
+	postgresConfig := database.NewPostgresConfig(
+		fmt.Sprintf("%s.%s.svc.cluster.local", configResource.Host, configResource.Namespace),
 		26257,
-		userResource.Spec.Cluster.Credentials.Username,
-		"", "", SSLModeVERIFYFULL, caFile, clientCert, clientKey,
+		configResource.User,
+		"", "", database.SSLModeVERIFYFULL, caFile, clientCert, clientKey,
 	)
-	db, err := NewDBConnection(postgresConfig, DBDriverPostgres)
+	fmt.Println(postgresConfig.String())
+	db, err := database.NewDBConnection(postgresConfig, database.DBDriverPostgres)
 	if err != nil {
 		return err
 	}
 	defer db.Close()
-	sqlStatement := `
-INSERT INTO users (age, email, first_name, last_name)
-VALUES ($1, $2, $3, $4)
-RETURNING id`
-	id := 0
-	if err := db.QueryRow(sqlStatement, 30, "jon@calhoun.io", "Jonathan", "Calhoun").Scan(&id); err != nil {
+
+	sqlCreateUser := fmt.Sprintf(`CREATE USER "%s";`, userResource.Spec.Name)
+	_, err = db.ExecContext(ctx, sqlCreateUser)
+	if database.IgnoreAlreadyExists(database.ProcessPostgresError(err)) != nil {
 		return err
 	}
+
+	for _, priv := range userResource.Spec.Privileges {
+		sqlGrant := fmt.Sprintf(`GRANT "%s" TO "%s";`, priv.Privilege, userResource.Spec.Name)
+		if priv.On != "" {
+			sqlGrant = fmt.Sprintf(`GRANT "%s" ON "%s" TO "%s";`, priv.Privilege, priv.On, userResource.Spec.Name)
+		}
+
+		if _, err := db.ExecContext(ctx, sqlGrant); database.ProcessPostgresError(err) != nil {
+			return err
+		}
+	}
 	return nil
+}
+func (r *UserReconciler) generateCockroachDBCertificatesForUser(ctx context.Context, userResource *authv1alpha1.User, configResource *authv1alpha1.PostgreSQLConfig, logger logr.Logger) (map[string][]byte, error) {
+
+	cockroachRootSecret, err := r.getV1Secret(ctx, configResource.SSLCredentials.UserSecret.Name, configResource.SSLCredentials.CASecret.Namespace, logger)
+	if err != nil {
+		return nil, err
+	}
+	caCert, err := utils.ByteToCaCert(cockroachRootSecret.Data["ca.crt"])
+	if err != nil {
+		return nil, err
+	}
+
+	cockroachCAKeySecret, err := r.getV1Secret(ctx, configResource.SSLCredentials.CASecret.Name, configResource.SSLCredentials.CASecret.Namespace, logger)
+	if err != nil {
+		return nil, err
+	}
+	// user cert config
+	caPrivKey, err := utils.ByteToCaPrivateKey(cockroachCAKeySecret.Data["ca.key"])
+	if err != nil {
+		return nil, err
+	}
+
+	return utils.GenCockroachCertFromCA(userResource.Spec.Name, caCert, caPrivKey)
 }
 
 // SetupWithManager sets up the controller with the Manager.
