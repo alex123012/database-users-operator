@@ -269,10 +269,13 @@ func prepareStatementForPriv(statement []string, priv authv1alpha1.Privilege, us
 
 func (p *Postgres) processUserTablePrivileges(ctx context.Context) error {
 	// map[string]map[authv1alpha1.Privilege]struct{}
-	privMap := make(map[authv1alpha1.Privilege]struct{})
+	privByDBMap := make(map[string]map[authv1alpha1.Privilege]struct{})
 	for _, priv := range p.userResource.Spec.Privileges {
 		if priv.On != "" && priv.Database != "" {
-			privMap[priv] = struct{}{}
+			if _, f := privByDBMap[priv.Database]; !f {
+				privByDBMap[priv.Database] = make(map[authv1alpha1.Privilege]struct{})
+			}
+			privByDBMap[priv.Database][priv] = struct{}{}
 		}
 	}
 
@@ -282,7 +285,7 @@ func (p *Postgres) processUserTablePrivileges(ctx context.Context) error {
 	}
 
 	for _, dbname := range dbList {
-		if err := p.processUserTablePrivilegesFromDB(ctx, dbname, privMap); err != nil {
+		if err := p.processUserTablePrivilegesFromDB(ctx, dbname, privByDBMap[dbname]); err != nil {
 			return err
 		}
 	}
