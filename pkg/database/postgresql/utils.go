@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	authv1alpha1 "github.com/alex123012/k8s-database-users-operator/api/v1alpha1"
-	"github.com/alex123012/k8s-database-users-operator/pkg/utils"
+	authv1alpha1 "github.com/alex123012/database-users-operator/api/v1alpha1"
+	"github.com/alex123012/database-users-operator/pkg/utils"
 	"github.com/jackc/pgx/v5/pgconn"
 )
 

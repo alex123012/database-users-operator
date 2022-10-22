@@ -17,7 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"github.com/alex123012/k8s-database-users-operator/pkg/database"
+	"github.com/alex123012/database-users-operator/pkg/database"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 

@@ -31,9 +31,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	authv1alpha1 "github.com/alex123012/k8s-database-users-operator/api/v1alpha1"
-	"github.com/alex123012/k8s-database-users-operator/pkg/common"
-	"github.com/alex123012/k8s-database-users-operator/pkg/database/postgresql"
+	authv1alpha1 "github.com/alex123012/database-users-operator/api/v1alpha1"
+	"github.com/alex123012/database-users-operator/pkg/common"
+	"github.com/alex123012/database-users-operator/pkg/database/postgresql"
 	"github.com/go-logr/logr"
 )
 

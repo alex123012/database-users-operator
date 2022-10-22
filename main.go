@@ -31,8 +31,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	authv1alpha1 "github.com/alex123012/k8s-database-users-operator/api/v1alpha1"
-	"github.com/alex123012/k8s-database-users-operator/controllers"
+	authv1alpha1 "github.com/alex123012/database-users-operator/api/v1alpha1"
+	"github.com/alex123012/database-users-operator/controllers"
 	//+kubebuilder:scaffold:imports
 )
 
