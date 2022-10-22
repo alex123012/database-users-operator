@@ -30,6 +30,7 @@ func ByteToCaCert(pemBytes []byte) (*x509.Certificate, error) {
 func FilePathFromHome(path string) string {
 	return os.Getenv("HOME") + "/" + path
 }
+
 func CreateFileFromBytes(path string, buffer []byte) error {
 	dir := filepath.Dir(path)
 	err := os.MkdirAll(dir, 0755)

@@ -36,23 +36,35 @@ spec:
             description: UserSpec defines the desired state of User
             properties:
               databaseConfig:
+                items:
+                  properties:
+                    name:
+                      type: string
+                    namespace:
+                      type: string
+                  required:
+                  - name
+                  - namespace
+                  type: object
+                type: array
+              name:
+                description: Name is appropriate database user name. If not provided
+                  - operator automatically substitutes this parameter with CR name
+                  (Comming soon) TODO
+                type: string
+              passwordSecret:
                 properties:
                   name:
                     type: string
                   namespace:
                     type: string
-                required:
-                - name
-                - namespace
                 type: object
-              name:
-                description: Name is appropriate database user name. If not provided
-                  - operator automatically substitutes this parameter with CR name
-                type: string
               privileges:
                 description: Privileges
                 items:
                   properties:
+                    database:
+                      type: string
                     "on":
                       description: if used PrivilegeType from PrivilegeTypeMap in
                         Privilege specify object to give Privilege to
@@ -64,6 +76,13 @@ spec:
                   - privilege
                   type: object
                 type: array
+              sslSecret:
+                properties:
+                  name:
+                    type: string
+                  namespace:
+                    type: string
+                type: object
             required:
             - databaseConfig
             type: object

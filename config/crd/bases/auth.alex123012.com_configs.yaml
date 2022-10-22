@@ -35,8 +35,15 @@ spec:
           spec:
             description: ConfigSpec defines the desired state of Config
             properties:
-              cockroachDB:
+              databaseType:
+                type: string
+              postgreSQL:
+                description: CockroachDB  PostgreSQLConfig `json:"cockroachDB"`
                 properties:
+                  clusterName:
+                    type: string
+                  databaseName:
+                    type: string
                   host:
                     type: string
                   namespace:
@@ -75,14 +82,11 @@ spec:
                 - host
                 - namespace
                 - port
-                - sslMode
                 - user
                 type: object
-              databaseType:
-                type: string
             required:
-            - cockroachDB
             - databaseType
+            - postgreSQL
             type: object
           status:
             description: ConfigStatus defines the observed state of Config
