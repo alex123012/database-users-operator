@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/alex123012/k8s-database-users-operator/pkg/utils"
+	"github.com/alex123012/k8s-database-users-operator/pkg/database/postgresql"
 	coreV1 "k8s.io/api/core/v1"
 
 	errors "k8s.io/apimachinery/pkg/api/errors"
@@ -64,7 +64,7 @@ func main() {
 func writeClientSecret(ctx context.Context, clientset coreV1Types.SecretInterface, username, clusterName string, data map[string][]byte) error {
 	secret := &coreV1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: fmt.Sprintf("%s-%s-user-tls", clusterName, username),
+			Name: fmt.Sprintf("%s-%s", clusterName, username),
 		},
 		Data: data,
 		Type: coreV1.SecretTypeOpaque,
@@ -108,14 +108,7 @@ func checkAlreadyExists(ctx context.Context, clientset coreV1Types.SecretInterfa
 	}
 	return nil
 }
+
 func generateCertificate(username string, caPrivKeyBytes, caCertBytes []byte) (map[string][]byte, error) {
-	caPrivKey, err := utils.ByteToCaPrivateKey(caPrivKeyBytes)
-	if err != nil {
-		return nil, err
-	}
-	caCert, err := utils.ByteToCaCert(caCertBytes)
-	if err != nil {
-		return nil, err
-	}
-	return utils.GenCockroachCertFromCA(username, caCert, caPrivKey)
+	return postgresql.GenPostgresCertFromCA(username, map[string][]byte{"ca.key": caPrivKeyBytes, "ca.crt": caCertBytes})
 }

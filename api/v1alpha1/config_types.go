@@ -26,25 +26,28 @@ import (
 
 // ConfigSpec defines the desired state of Config
 type ConfigSpec struct {
-	DatabaseType DatabaseType     `json:"databaseType"`
-	CockroachDB  PostgreSQLConfig `json:"cockroachDB"`
+	DatabaseType DatabaseType `json:"databaseType"`
+	// CockroachDB  PostgreSQLConfig `json:"cockroachDB"`
+	PostgreSQL PostgreSQLConfig `json:"postgreSQL"`
 }
 
 type DatabaseType string
 
 const (
-	// PostgreSQL  ClusterType = "postgresql"
-	CockroachDB DatabaseType = "CockroachDB"
+	PostgreSQL DatabaseType = "PostgreSQL"
+	// CockroachDB DatabaseType = "CockroachDB"
 )
 
 type PostgreSQLConfig struct {
-	Host           string           `json:"host"`
-	Port           int              `json:"port"`
-	Namespace      string           `json:"namespace"`
-	User           string           `json:"user"`
-	SSLMode        database.SSLMode `json:"sslMode"`
-	SSLCredentials SSLSecrets       `json:"sslSecrets,omitempty"`
-	PasswordSecret Secret           `json:"passwordSecret,omitempty"`
+	Host           string                   `json:"host"`
+	Port           int                      `json:"port"`
+	Namespace      string                   `json:"namespace"`
+	User           string                   `json:"user"`
+	SSLMode        database.PostgresSSLMode `json:"sslMode,omitempty"`
+	ClusterName    string                   `json:"clusterName,omitempty"`
+	DatabaseName   string                   `json:"databaseName,omitempty"`
+	SSLCredentials SSLSecrets               `json:"sslSecrets,omitempty"`
+	PasswordSecret Secret                   `json:"passwordSecret,omitempty"`
 }
 
 type SSLSecrets struct {

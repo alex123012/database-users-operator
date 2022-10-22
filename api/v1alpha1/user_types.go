@@ -23,10 +23,14 @@ import (
 // UserSpec defines the desired state of User
 type UserSpec struct {
 	// Name is appropriate database user name.
-	// If not provided - operator automatically substitutes this parameter with CR name
+	// If not provided - operator automatically substitutes this parameter with CR name (Comming soon) TODO
 	Name string `json:"name,omitempty"`
 
-	DatabaseConfig DatabaseConfig `json:"databaseConfig"`
+	PasswordSecret Secret `json:"passwordSecret,omitempty"`
+
+	SSLSecret Secret `json:"sslSecret,omitempty"`
+
+	DatabaseConfig []DatabaseConfig `json:"databaseConfig"`
 	// Privileges
 	Privileges []Privilege `json:"privileges,omitempty"`
 }
@@ -38,10 +42,12 @@ type DatabaseConfig struct {
 
 type Privilege struct {
 	// Privilege is role name or PrivilegeType
-	Privilege PrivilegeType `json:"privilege"`
+	Privilege PrivilegeType `json:"privilege" postgres:"privilege_type"`
 
 	// if used PrivilegeType from PrivilegeTypeMap in Privilege specify object to give Privilege to
-	On string `json:"on,omitempty"`
+	On string `json:"on,omitempty" postgres:"table_name"`
+
+	Database string `json:"database,omitempty" postgres:"table_catalog"`
 }
 
 type PrivilegeType string

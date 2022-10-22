@@ -1,29 +1,30 @@
 package database
 
-import (
-	"database/sql"
-
-	_ "github.com/lib/pq"
-)
-
-type Config interface {
-	String() string
-}
 type DBDriver string
 
 const (
-	DBDriverPostgres DBDriver = "postgres"
+	DBDriverPostgres DBDriver = "pgx"
 )
 
-func NewDBConnection(config Config, dbDriver DBDriver) (*sql.DB, error) {
-	db, err := sql.Open(string(dbDriver), config.String())
-	if err != nil {
-		return nil, err
-	}
+type any = interface{}
 
-	err = db.Ping()
-	if err != nil {
-		return nil, err
-	}
-	return db, err
+type NamedQuery struct {
+	Query string
+	Arg   any
 }
+
+type Query struct {
+	Query string
+	Args  []any
+}
+
+type PostgresSSLMode string
+
+const (
+	SSLModeDISABLE    PostgresSSLMode = "disable"
+	SSLModeALLOW      PostgresSSLMode = "allow"
+	SSLModePREFER     PostgresSSLMode = "prefer"
+	SSLModeREQUIRE    PostgresSSLMode = "require"
+	SSLModeVERIFYCA   PostgresSSLMode = "verify-ca"
+	SSLModeVERIFYFULL PostgresSSLMode = "verify-full"
+)
