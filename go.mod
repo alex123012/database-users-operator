@@ -1,4 +1,4 @@
-module github.com/alex123012/k8s-database-users-operator
+module github.com/alex123012/database-users-operator
 
 go 1.18
 

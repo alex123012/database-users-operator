@@ -1,4 +1,4 @@
-# k8s-database-users-operator
+# database-users-operator
 // TODO(user): Add simple overview of use/purpose
 
 ## Description
@@ -18,13 +18,13 @@ kubectl apply -f config/samples/
 2. Build and push your image to the location specified by `IMG`:
 
 ```sh
-make docker-build docker-push IMG=<some-registry>/k8s-database-users-operator:tag
+make docker-build docker-push IMG=<some-registry>/database-users-operator:tag
 ```
 
 3. Deploy the controller to the cluster with the image specified by `IMG`:
 
 ```sh
-make deploy IMG=<some-registry>/k8s-database-users-operator:tag
+make deploy IMG=<some-registry>/database-users-operator:tag
 ```
 
 ### Uninstall CRDs
@@ -93,5 +93,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 # Helper
+```bash
+# Bash command for retrieving SSL certificates for user from default CockroachDB installation with operator
 user=root
 for key in $(kubectl get secrets cockroachdb-${user} -oyaml | yq '.data | keys | .[]'); do kubectl get secrets cockroachdb-root -oyaml | key=$key yq '.data[strenv(key)]' | base64 -d | tee tmp/$(if [[ $key == "tls.key" ]]; then echo "client.${user}.key"; elif [[ $key == "tls.crt" ]]; then echo "client.${user}.crt"; else echo "ca.crt"; fi); done
+```
+
+# TODO
+* Auto delete user from DB on databaseConfig entry remove from User CR
+* Auto remove user from all dbs listed in databaseConfig when User CR deleted
+* Add MySQL support

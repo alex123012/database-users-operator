@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/alex123012/k8s-database-users-operator/pkg/database"
+	"github.com/alex123012/database-users-operator/pkg/database"
 )
 
 type PostgresConfig struct {

@@ -7,10 +7,10 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/errors"
 
-	authv1alpha1 "github.com/alex123012/k8s-database-users-operator/api/v1alpha1"
-	"github.com/alex123012/k8s-database-users-operator/pkg/common"
-	"github.com/alex123012/k8s-database-users-operator/pkg/database"
-	"github.com/alex123012/k8s-database-users-operator/pkg/utils"
+	authv1alpha1 "github.com/alex123012/database-users-operator/api/v1alpha1"
+	"github.com/alex123012/database-users-operator/pkg/common"
+	"github.com/alex123012/database-users-operator/pkg/database"
+	"github.com/alex123012/database-users-operator/pkg/utils"
 	"github.com/go-logr/logr"
 )
 
