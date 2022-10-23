@@ -3,9 +3,21 @@
 Kubernetes operator to create and manage users and roles for various SQL and NoSQL databases (currently supports PostgreSQL, CockroachDB). This repository contains a [custom controller](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/#custom-controllers) and [custom resource definition (CRD)](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/#customresourcedefinitions) designed for the lifecycle (creation, update privileges, deletion) of a different databases users/roles.
 
 ## Description
-// TODO(user): An in-depth paragraph about your project and overview of use
+### Deploy operator
+Deploy operator using kubectl:
+```bash
+kubectl apply -f https://raw.githubusercontent.com/alex123012/database-users-operator/main/deploy/manifests.yaml
+```
 
-## Getting Started
+Watch controller readiness:
+```bash
+kubectl get po -n database-users-operator-system
+```
+
+### Deploy Custom Resources
+Using examples from [config/samples/](https://github.com/alex123012/database-users-operator/tree/main/config/samples) create and deploy CRs
+
+## Development
 You’ll need a Kubernetes cluster to run against. You can use [KIND](https://sigs.k8s.io/kind) to get a local cluster for testing, or run against a remote cluster.
 **Note:** Your controller will automatically use the current context in your kubeconfig file (i.e. whatever cluster `kubectl cluster-info` shows).
 
