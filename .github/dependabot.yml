@@ -1,0 +1,17 @@
+version: 2
+updates:
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    ignore:
+      - dependency-name: "k8s.io/api"
+        versions: ["v0.24.x"]
+      - dependency-name: "k8s.io/api-machinery"
+        versions: ["v0.24.x"]
+      - dependency-name: "k8s.io/client-go"
+        versions: ["v0.24.x"]
+      - dependency-name: "github.com/go-logr/logr"
+        versions: ["v1.2.x"]
+      - dependency-name: github.com/jmoiron/sqlx
+        versions: ["v1.3.x"]

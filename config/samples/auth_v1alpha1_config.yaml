@@ -8,16 +8,16 @@ spec:
   postgreSQL:
     host: cockroachdb-public
     port: 26257
-    namespace: default
+    namespace: dev
     user: root
     sslMode: verify-full
     sslSecrets:
       userSecret:
         name: cockroachdb-root
-        namespace: default
+        namespace: dev
       caSecret:
         name: cockroachdb-ca
-        namespace: default
+        namespace: dev
 ---
 apiVersion: auth.alex123012.com/v1alpha1
 kind: Config
@@ -28,16 +28,9 @@ spec:
   postgreSQL:
     host: postgres
     port: 5432
-    namespace: default
+    namespace: dev
     user: postgres
     sslMode: disable
     passwordSecret:
       name: postgres
-      namespace: default
-    # sslSecrets:
-    #   userSecret:
-    #     name: cockroachdb-root
-    #     namespace: default
-    #   caSecret:
-    #     name: cockroachdb-ca
-    # namespace: default
+      namespace: dev

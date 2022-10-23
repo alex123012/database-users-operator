@@ -6,7 +6,7 @@ metadata:
 spec:
   passwordSecret:
     name: postgres-john
-    namespace: default
+    namespace: dev
   privileges:
     - privilege: CREATE
       database: test
@@ -16,6 +16,6 @@ spec:
     - privilege: postgres
   databaseConfig:
     - name: postgres
-      namespace: default
+      namespace: dev
     - name: cockroachdb
-      namespace: default
+      namespace: dev
