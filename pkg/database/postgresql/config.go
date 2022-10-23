@@ -7,6 +7,13 @@ import (
 	"github.com/alex123012/database-users-operator/pkg/database"
 )
 
+type DBType = string
+
+const (
+	PostgreSQL  DBType = "PostgreSQL"
+	CockroachDB DBType = "CockroachDB"
+)
+
 type PostgresConfig struct {
 	// connConfig *pgx.ConnConfig
 	Host                               string

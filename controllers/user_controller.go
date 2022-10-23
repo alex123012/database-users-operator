@@ -48,7 +48,8 @@ const userFinalizer = "auth.alex123012.com/finalizer"
 //+kubebuilder:rbac:groups=auth.alex123012.com,resources=users,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=auth.alex123012.com,resources=users/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=auth.alex123012.com,resources=users/finalizers,verbs=update
-//+kubebuilder:rbac:groups=v1,resources=secrets,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=auth.alex123012.com,resources=configs,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -143,9 +144,7 @@ func (r *UserReconciler) DeleteV1Secret(ctx context.Context, secretResource *v1.
 }
 
 func (r *UserReconciler) processCreateUpdateRequest(errorGroupCtx context.Context, userResource *authv1alpha1.User, errorGroup *errgroup.Group, logger logr.Logger) error {
-
-	r.runErrGroup(errorGroupCtx, userResource, errorGroup, logger, r.processUserWithConfig)
-	if err := errorGroup.Wait(); err != nil {
+	if err := r.runErrGroup(errorGroupCtx, userResource, errorGroup, logger, r.processUserWithConfig); err != nil {
 		logger.Error(err, "Failed to create db user for User resource")
 		return err
 	}
@@ -159,8 +158,7 @@ func (r *UserReconciler) processDeleteRequest(ctx, errorGroupCtx context.Context
 		// Run finalization logic for userFinalizer. If the
 		// finalization logic fails, don't remove the finalizer so
 		// that we can retry during the next reconciliation.
-		r.runErrGroup(errorGroupCtx, userResource, errorGroup, logger, r.deleteUserWithConfig)
-		if err := errorGroup.Wait(); err != nil {
+		if err := r.runErrGroup(errorGroupCtx, userResource, errorGroup, logger, r.deleteUserWithConfig); err != nil {
 			logger.Error(err, "Failed to delete db user for User resource")
 			return err
 		}

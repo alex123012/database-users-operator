@@ -8,6 +8,18 @@ rules:
 - apiGroups:
   - auth.alex123012.com
   resources:
+  - configs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - auth.alex123012.com
+  resources:
   - users
   verbs:
   - create
@@ -32,7 +44,7 @@ rules:
   - patch
   - update
 - apiGroups:
-  - v1
+  - ""
   resources:
   - secrets
   verbs:

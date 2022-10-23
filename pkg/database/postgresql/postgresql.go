@@ -49,20 +49,23 @@ func NewPostgres(config *PostgresConfig, configResource *authv1alpha1.PostgreSQL
 func (p *Postgres) Connect(ctx context.Context) error {
 	switch p.config.SSLMode {
 	case database.SSLModeVERIFYCA, database.SSLModeREQUIRE, database.SSLModeVERIFYFULL:
-		postgresRootSecret, err := p.client.GetV1Secret(
-			ctx,
-			p.configResource.SSLCredentials.UserSecret.Name,
-			p.configResource.SSLCredentials.UserSecret.Namespace,
-			p.logger,
-		)
-		if err != nil {
-			return err
+		if p.postgresRootData == nil {
+			postgresRootSecret, err := p.client.GetV1Secret(
+				ctx,
+				p.configResource.SSLCredentials.UserSecret.Name,
+				p.configResource.SSLCredentials.UserSecret.Namespace,
+				p.logger,
+			)
+			if err != nil {
+				return err
+			}
+			p.postgresRootData = postgresRootSecret.Data
 		}
+
 		p.config.SSLCACert = utils.FilePathFromHome("postgres-certs/ca.crt")
 		p.config.SSLUserCert = utils.FilePathFromHome(fmt.Sprintf("postgres-certs/client.%s.crt", p.configResource.User))
 		p.config.SSLUserKey = utils.FilePathFromHome(fmt.Sprintf("postgres-certs/client.%s.key", p.configResource.User))
 
-		p.postgresRootData = postgresRootSecret.Data
 		if err := utils.CreateFileFromBytes(p.config.SSLCACert, p.postgresRootData["ca.crt"]); err != nil {
 			return err
 		}
@@ -77,16 +80,18 @@ func (p *Postgres) Connect(ctx context.Context) error {
 
 		p.createCerts = true
 	case database.SSLModeALLOW, database.SSLModeDISABLE, database.SSLModePREFER:
-		passwordSecret, err := p.client.GetV1Secret(
-			ctx,
-			p.configResource.PasswordSecret.Name,
-			p.configResource.PasswordSecret.Namespace,
-			p.logger,
-		)
-		if err != nil {
-			return err
+		if p.config.Password == "" {
+			passwordSecret, err := p.client.GetV1Secret(
+				ctx,
+				p.configResource.PasswordSecret.Name,
+				p.configResource.PasswordSecret.Namespace,
+				p.logger,
+			)
+			if err != nil {
+				return err
+			}
+			p.config.Password = string(passwordSecret.Data["password"])
 		}
-		p.config.Password = string(passwordSecret.Data["password"])
 	default:
 		return errors.NewBadRequest("No such SSLmode")
 	}
@@ -112,8 +117,12 @@ func (p *Postgres) ProcessUser(ctx context.Context) error {
 	defer utils.DeleteFile(p.config.SSLCACert)
 	defer p.Close(ctx)
 
+	if err := p.createUser(ctx); err != nil {
+		return err
+	}
+
 	errGroup, ctx := errgroup.WithContext(ctx)
-	goroutinesList := []processhandler{p.createUser, p.processUserTablePrivileges, p.processDBUserRoles}
+	goroutinesList := []processhandler{p.processUserTablePrivileges, p.processDBUserRoles}
 	for _, fn := range goroutinesList {
 		tmpFn := fn
 		errGroup.Go(func() error {
@@ -146,7 +155,7 @@ func (p *Postgres) DeleteUser(ctx context.Context) error {
 	return p.deleteUser(ctx)
 }
 
-func (p *Postgres) createUser(ctx context.Context, onDelete bool) error {
+func (p *Postgres) createUser(ctx context.Context) error {
 	sqlCreateUser := fmt.Sprintf(`CREATE USER %s`, EscapeLiteral(p.userResource.GetName()))
 	if p.userResource.Spec.PasswordSecret != (authv1alpha1.Secret{}) {
 		passwordSecret, err := p.client.GetV1Secret(
@@ -174,6 +183,7 @@ func (p *Postgres) deleteUser(ctx context.Context) error {
 	}
 	return p.conn.Exec(ctx, sqlDeleteUser, database.DisableLogger)
 }
+
 func (p *Postgres) processUserTablePrivileges(ctx context.Context, onDelete bool) error {
 	privByDBMap := make(map[string]map[authv1alpha1.Privilege]struct{})
 	for _, priv := range p.userResource.Spec.Privileges {
@@ -214,6 +224,8 @@ func (p *Postgres) processUserTablePrivilegesFromDB(ctx context.Context, dbname 
 	newconf := p.config.Copy()
 	newconf.Dbname = dbname
 	conn := NewPostgres(newconf, p.configResource, p.userResource, p.client, p.logger)
+	conn.postgresRootData = p.postgresRootData
+	conn.config.Password = p.config.Password
 
 	if err := conn.Connect(ctx); err != nil {
 		return err
@@ -338,7 +350,7 @@ func (p *Postgres) revokeNotDefinedAndAssignDefined(ctx context.Context, conn *d
 }
 
 func (p *Postgres) getAllDatabases(ctx context.Context) ([]string, error) {
-	databases := make([]string, 0)
+	var databases []string
 	err := p.conn.Select(ctx, &databases, "SELECT datname FROM pg_database WHERE datistemplate = 'false' AND datname != 'postgres';")
 	if err != nil {
 		return nil, err

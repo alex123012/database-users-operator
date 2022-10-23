@@ -95,13 +95,19 @@ func (d *DBconnector) Select(ctx context.Context, dest any, quer string, args ..
 	args = d.infoLog(quer, args)
 	return selectx(ctx, d.db, dest, quer, args...)
 }
+
+func (d *DBconnector) Get(ctx context.Context, dest any, quer string, args ...any) error {
+	args = d.infoLog(quer, args)
+	return getx(ctx, d.db, dest, quer, args...)
+}
+
 func (d *DBconnector) ExecTx(ctx context.Context, queryList []Query, namedQuery []NamedQuery, disableArg ...any) error {
 	tx, err := d.db.BeginTxx(ctx, &sql.TxOptions{})
 	d.logger.Info("Executing transaction...")
-	defer tx.Rollback()
 	if err != nil {
 		return err
 	}
+	defer tx.Rollback()
 	for _, q := range queryList {
 		args := d.infoLog(q.Query, q.Args)
 		if err := exec(ctx, tx, q.Query, args...); err != nil {
@@ -126,7 +132,9 @@ func selectx(ctx context.Context, q sqlx.QueryerContext, dest any, quer string, 
 	return sqlx.SelectContext(ctx, q, dest, quer, args...)
 }
 
-// func (d *DBconnector) QueryTx(ctx context.Context, queryList []Query, namedQuery []NamedQuery)
+func getx(ctx context.Context, q sqlx.QueryerContext, dest any, quer string, args ...any) error {
+	return sqlx.GetContext(ctx, q, dest, quer, args...)
+}
 
 func exec(ctx context.Context, db sqlx.ExtContext, query string, args ...any) error {
 	_, err := db.ExecContext(ctx, query, args...)

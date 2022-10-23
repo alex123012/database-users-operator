@@ -1,4 +1,4 @@
-# database-users-operator
+# Database Users Kubernetes Operator
 
 Kubernetes operator to create and manage users and roles for various SQL and NoSQL databases (currently supports PostgreSQL, CockroachDB). This repository contains a [custom controller](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/#custom-controllers) and [custom resource definition (CRD)](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/#customresourcedefinitions) designed for the lifecycle (creation, update privileges, deletion) of a different databases users/roles.
 
@@ -96,13 +96,16 @@ limitations under the License.
 # Helper
 ```bash
 # Bash command for retrieving SSL certificates for user from default CockroachDB installation with operator
-user=root
-for key in $(kubectl get secrets cockroachdb-${user} -oyaml | yq '.data | keys | .[]'); do kubectl get secrets cockroachdb-${user} -oyaml | key=$key yq '.data[strenv(key)]' | base64 -d | tee tmp/$(if [[ $key == "tls.key" ]]; then echo "client.${user}.key"; elif [[ $key == "tls.crt" ]]; then echo "client.${user}.crt"; else echo "ca.crt"; fi); done
+user=john
+secret_name=john
+for key in $(kubectl get secrets ${secret_name} -oyaml | yq '.data | keys | .[]'); do kubectl get secrets ${secret_name} -oyaml | key=$key yq '.data[strenv(key)]' | base64 -d | tee tmp/$(if [[ $key == "tls.key" ]]; then echo "client.${user}.key"; elif [[ $key == "tls.crt" ]]; then echo "client.${user}.crt"; else echo "ca.crt"; fi); done
 ```
 
 # TODO
 - [x] Auto remove user from all dbs listed in databaseConfig when User CR deleted
 - [ ] Add webhook validation for config and user CR
+- [ ] Create events for user CR
+- [ ] Create status updates for user CR
 - [ ] Auto delete user from DB on databaseConfig entry remove from User CR
-- [ ] Check compability with different postgres versions
+- [ ] Check compability with different postgres versions (only checked with PostgreSQL 15 and CockroachDB 22.1.9)
 - [ ] Add MySQL support
