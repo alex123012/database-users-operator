@@ -7,12 +7,14 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"errors"
+	"fmt"
 	"math/big"
 	"math/rand"
 	"strings"
 	"time"
 
 	authv1alpha1 "github.com/alex123012/database-users-operator/api/v1alpha1"
+	"github.com/alex123012/database-users-operator/pkg/database"
 	"github.com/alex123012/database-users-operator/pkg/utils"
 	"github.com/jackc/pgx/v5/pgconn"
 )
@@ -159,4 +161,25 @@ func IntersectDefinedPrivsWithDB(definedPrivs, dbPrivsMap map[authv1alpha1.Privi
 		}
 	}
 	return toCreate, toRevoke
+}
+
+func getQueryListFromPrivsList(queryTemplate []string, privList []authv1alpha1.Privilege, username string) []database.Query {
+	var queryTemplateList []database.Query
+	for _, priv := range privList {
+		revokeQuery := prepareStatementForPriv(queryTemplate, priv, username)
+		queryTemplateList = append(queryTemplateList, database.Query{Query: revokeQuery})
+	}
+	return queryTemplateList
+}
+func prepareStatementForPriv(statement []string, priv authv1alpha1.Privilege, userEsc string) string {
+	privEsc, onEsc, databaseEsc := EscapeLiteralWithoutQuotes(string(priv.Privilege)), EscapeLiteral(priv.On), EscapeLiteral(priv.Database)
+	query := fmt.Sprintf(strings.Join(statement, " "), privEsc, userEsc)
+	if priv.On != "" && priv.Database != "" {
+		query = fmt.Sprintf(strings.Join([]string{statement[0], "ON %s", statement[1]}, " "), privEsc, onEsc, userEsc)
+	}
+
+	if priv.On == "" && priv.Database != "" {
+		query = fmt.Sprintf(strings.Join([]string{statement[0], "ON DATABASE %s", statement[1]}, " "), privEsc, databaseEsc, userEsc)
+	}
+	return query
 }

@@ -26,8 +26,9 @@ import (
 
 // ConfigSpec defines the desired state of Config
 type ConfigSpec struct {
+	//
 	DatabaseType DatabaseType `json:"databaseType"`
-	// CockroachDB  PostgreSQLConfig `json:"cockroachDB"`
+	//
 	PostgreSQL PostgreSQLConfig `json:"postgreSQL"`
 }
 
@@ -35,7 +36,6 @@ type DatabaseType string
 
 const (
 	PostgreSQL DatabaseType = "PostgreSQL"
-	// CockroachDB DatabaseType = "CockroachDB"
 )
 
 type PostgreSQLConfig struct {
@@ -51,12 +51,16 @@ type PostgreSQLConfig struct {
 }
 
 type SSLSecrets struct {
+	//
 	UserSecret Secret `json:"userSecret,omitempty"`
-	CASecret   Secret `json:"caSecret,omitempty"`
+	//
+	CASecret Secret `json:"caSecret,omitempty"`
 }
 
 type Secret struct {
-	Name      string `json:"name,omitempty"`
+	//
+	Name string `json:"name,omitempty"`
+	//
 	Namespace string `json:"namespace,omitempty"`
 }
 

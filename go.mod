@@ -8,6 +8,8 @@ require (
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.18.1
+	golang.org/x/exp v0.0.0-20221019170559-20944726eadf
+	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	k8s.io/api v0.24.2
 	k8s.io/apimachinery v0.24.2
 	k8s.io/client-go v0.24.2

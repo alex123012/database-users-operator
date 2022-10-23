@@ -38,7 +38,6 @@ spec:
               databaseType:
                 type: string
               postgreSQL:
-                description: CockroachDB  PostgreSQLConfig `json:"cockroachDB"`
                 properties:
                   clusterName:
                     type: string

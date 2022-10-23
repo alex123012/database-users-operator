@@ -3,8 +3,9 @@ package postgresql
 import (
 	"context"
 	"fmt"
-	"strings"
 
+	"golang.org/x/exp/maps"
+	"golang.org/x/sync/errgroup"
 	"k8s.io/apimachinery/pkg/api/errors"
 
 	authv1alpha1 "github.com/alex123012/database-users-operator/api/v1alpha1"
@@ -13,6 +14,8 @@ import (
 	"github.com/alex123012/database-users-operator/pkg/utils"
 	"github.com/go-logr/logr"
 )
+
+type processhandler = func(context.Context, bool) error
 
 func NewPostgresFromConfig(config *authv1alpha1.Config, userResource *authv1alpha1.User, client common.KubeInterface, logger logr.Logger) common.DatabaseInterface {
 	configResource := &config.Spec.PostgreSQL
@@ -24,12 +27,14 @@ func NewPostgresFromConfig(config *authv1alpha1.Config, userResource *authv1alph
 }
 
 type Postgres struct {
-	conn           *database.DBconnector
-	config         *PostgresConfig
-	logger         logr.Logger
-	client         common.KubeInterface
-	configResource *authv1alpha1.PostgreSQLConfig
-	userResource   *authv1alpha1.User
+	conn             *database.DBconnector
+	config           *PostgresConfig
+	logger           logr.Logger
+	client           common.KubeInterface
+	configResource   *authv1alpha1.PostgreSQLConfig
+	userResource     *authv1alpha1.User
+	createCerts      bool
+	postgresRootData map[string][]byte
 }
 
 func NewPostgres(config *PostgresConfig, configResource *authv1alpha1.PostgreSQLConfig, userResource *authv1alpha1.User, client common.KubeInterface, logger logr.Logger) *Postgres {
@@ -57,22 +62,20 @@ func (p *Postgres) Connect(ctx context.Context) error {
 		p.config.SSLUserCert = utils.FilePathFromHome(fmt.Sprintf("postgres-certs/client.%s.crt", p.configResource.User))
 		p.config.SSLUserKey = utils.FilePathFromHome(fmt.Sprintf("postgres-certs/client.%s.key", p.configResource.User))
 
-		secretMap := postgresRootSecret.Data
-		if err := utils.CreateFileFromBytes(p.config.SSLCACert, secretMap["ca.crt"]); err != nil {
+		p.postgresRootData = postgresRootSecret.Data
+		if err := utils.CreateFileFromBytes(p.config.SSLCACert, p.postgresRootData["ca.crt"]); err != nil {
 			return err
 		}
-		// defer utils.DeleteFile(caCert)
 
-		if err := utils.CreateFileFromBytes(p.config.SSLUserCert, secretMap["tls.crt"]); err != nil {
+		if err := utils.CreateFileFromBytes(p.config.SSLUserCert, p.postgresRootData["tls.crt"]); err != nil {
 			return err
 		}
-		// defer utils.DeleteFile(clientCert)
 
-		if err := utils.CreateFileFromBytes(p.config.SSLUserKey, secretMap["tls.key"]); err != nil {
+		if err := utils.CreateFileFromBytes(p.config.SSLUserKey, p.postgresRootData["tls.key"]); err != nil {
 			return err
 		}
-		// defer utils.DeleteFile(clientKey)
 
+		p.createCerts = true
 	case database.SSLModeALLOW, database.SSLModeDISABLE, database.SSLModePREFER:
 		passwordSecret, err := p.client.GetV1Secret(
 			ctx,
@@ -104,22 +107,47 @@ func (p *Postgres) ProcessUser(ctx context.Context) error {
 	if err := p.Connect(ctx); err != nil {
 		return err
 	}
+	defer utils.DeleteFile(p.config.SSLUserCert)
+	defer utils.DeleteFile(p.config.SSLUserKey)
+	defer utils.DeleteFile(p.config.SSLCACert)
 	defer p.Close(ctx)
-	if err := p.createUser(ctx); err != nil {
-		return err
-	}
-	if err := p.updatePrivileges(ctx); err != nil {
-		return err
-	}
 
-	return nil
+	errGroup, ctx := errgroup.WithContext(ctx)
+	goroutinesList := []processhandler{p.createUser, p.processUserTablePrivileges, p.processDBUserRoles}
+	for _, fn := range goroutinesList {
+		tmpFn := fn
+		errGroup.Go(func() error {
+			return tmpFn(ctx, false)
+		})
+	}
+	return errGroup.Wait()
 }
 
 func (p *Postgres) DeleteUser(ctx context.Context) error {
-	return nil
+	if err := p.Connect(ctx); err != nil {
+		return err
+	}
+	defer utils.DeleteFile(p.config.SSLUserCert)
+	defer utils.DeleteFile(p.config.SSLUserKey)
+	defer utils.DeleteFile(p.config.SSLCACert)
+	defer p.Close(ctx)
+
+	errGroup, errGroupCtx := errgroup.WithContext(ctx)
+	goroutinesList := []processhandler{p.processUserTablePrivileges, p.processDBUserRoles}
+	for _, fn := range goroutinesList {
+		tmpFn := fn
+		errGroup.Go(func() error {
+			return tmpFn(errGroupCtx, true)
+		})
+	}
+	if err := errGroup.Wait(); err != nil {
+		return err
+	}
+	return p.deleteUser(ctx)
 }
-func (p *Postgres) createUser(ctx context.Context) error {
-	sqlCreateUser := fmt.Sprintf(`CREATE USER %s`, EscapeLiteral(p.userResource.Spec.Name))
+
+func (p *Postgres) createUser(ctx context.Context, onDelete bool) error {
+	sqlCreateUser := fmt.Sprintf(`CREATE USER %s`, EscapeLiteral(p.userResource.GetName()))
 	if p.userResource.Spec.PasswordSecret != (authv1alpha1.Secret{}) {
 		passwordSecret, err := p.client.GetV1Secret(
 			ctx,
@@ -132,32 +160,121 @@ func (p *Postgres) createUser(ctx context.Context) error {
 		}
 		sqlCreateUser += fmt.Sprintf(" WITH PASSWORD %s", EscapeString(string(passwordSecret.Data["password"])))
 	}
+
+	if p.createCerts {
+		p.generateCertSecretForUser(ctx)
+	}
 	return IgnoreAlreadyExists(p.conn.Exec(ctx, sqlCreateUser, database.DisableLogger))
 }
 
-func (p *Postgres) updatePrivileges(ctx context.Context) error {
+func (p *Postgres) deleteUser(ctx context.Context) error {
+	sqlDeleteUser := fmt.Sprintf(`DROP USER %s`, EscapeLiteral(p.userResource.GetName()))
+	if p.createCerts {
+		p.deleteCertSecretForUser(ctx)
+	}
+	return p.conn.Exec(ctx, sqlDeleteUser, database.DisableLogger)
+}
+func (p *Postgres) processUserTablePrivileges(ctx context.Context, onDelete bool) error {
+	privByDBMap := make(map[string]map[authv1alpha1.Privilege]struct{})
+	for _, priv := range p.userResource.Spec.Privileges {
+		if priv.On != "" && priv.Database != "" {
+			if _, f := privByDBMap[priv.Database]; !f {
+				privByDBMap[priv.Database] = make(map[authv1alpha1.Privilege]struct{})
+			}
+			privByDBMap[priv.Database][priv] = struct{}{}
+		}
+	}
 
-	if err := p.processUserTablePrivileges(ctx); err != nil {
+	dbList, err := p.getAllDatabases(ctx)
+	if err != nil {
 		return err
 	}
 
-	if err := p.processDBUserRoles(ctx); err != nil {
-		return err
+	for _, dbname := range dbList {
+		if err := p.processUserTablePrivilegesFromDB(ctx, dbname, privByDBMap[dbname], onDelete); err != nil {
+			return err
+		}
 	}
-
 	return nil
 }
 
-func (p *Postgres) processDBUserRoles(ctx context.Context) error {
+func (p *Postgres) processDBUserRoles(ctx context.Context, onDelete bool) error {
 
 	dbPrivsMap, err := p.getDBUserRoles(ctx)
 	if err != nil {
 		return err
 	}
-	if err := p.revokeNotDefinedAndAssignDefinedRoles(ctx, dbPrivsMap); err != nil {
+	if err := p.revokeNotDefinedAndAssignDefinedRoles(ctx, dbPrivsMap, onDelete); err != nil {
 		return err
 	}
 	return nil
+}
+
+func (p *Postgres) processUserTablePrivilegesFromDB(ctx context.Context, dbname string, privMap map[authv1alpha1.Privilege]struct{}, onDelete bool) error {
+	newconf := p.config.Copy()
+	newconf.Dbname = dbname
+	conn := NewPostgres(newconf, p.configResource, p.userResource, p.client, p.logger)
+
+	if err := conn.Connect(ctx); err != nil {
+		return err
+	}
+	defer conn.Close(ctx)
+
+	var tablePrivs []authv1alpha1.Privilege
+	err := conn.conn.Select(ctx, &tablePrivs,
+		`SELECT privilege_type,
+				table_catalog,
+				table_name
+		FROM information_schema.role_table_grants
+		WHERE grantee = $1`,
+		p.userResource.GetName())
+	if err != nil {
+		return err
+	}
+	p.logger.Info("DB user table privs", "TABLE_PRIVILEGES", tablePrivs)
+	tablePrivsMap := make(map[authv1alpha1.Privilege]struct{})
+	for _, priv := range tablePrivs {
+		tablePrivsMap[priv] = struct{}{}
+	}
+
+	return p.revokeNotDefinedAndAssignDefined(ctx, conn.conn, tablePrivsMap, privMap, onDelete)
+}
+
+func (p *Postgres) getDBUserRoles(ctx context.Context) (map[authv1alpha1.Privilege]struct{}, error) {
+	rolesList, err := p.userRolesQuery(ctx)
+	if err != nil {
+		return nil, err
+	}
+	dbPrivsList, err := p.userDBPrivsQuery(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	roles := make(map[authv1alpha1.Privilege]struct{})
+	for _, role := range append(rolesList, dbPrivsList...) {
+		roles[role] = struct{}{}
+	}
+	p.logger.Info(fmt.Sprintf("Getted roles for DB user %s: %v", p.userResource.GetName(), roles))
+	return roles, nil
+}
+
+func (p *Postgres) userRolesQuery(ctx context.Context) ([]authv1alpha1.Privilege, error) {
+	var rolesList []authv1alpha1.Privilege
+
+	queryTemplate := `
+	SELECT b.rolname as privilege_type
+	FROM pg_catalog.pg_auth_members m
+	JOIN pg_catalog.pg_roles b ON (m.roleid = b.oid)
+	WHERE m.member =
+		(SELECT oid
+		 FROM pg_catalog.pg_roles r
+		 WHERE r.rolname = $1)`
+
+	err := p.conn.Select(ctx, &rolesList, queryTemplate, p.userResource.GetName())
+	if err != nil {
+		return nil, err
+	}
+	return rolesList, nil
 }
 
 func (p *Postgres) userDBPrivsQuery(ctx context.Context) ([]authv1alpha1.Privilege, error) {
@@ -176,116 +293,44 @@ func (p *Postgres) userDBPrivsQuery(ctx context.Context) ([]authv1alpha1.Privile
 		FROM pg_catalog.pg_roles r
 		WHERE r.rolname = $1)`
 
-	err := p.conn.Select(ctx, &privList, queryTemplate, p.userResource.Spec.Name)
+	err := p.conn.Select(ctx, &privList, queryTemplate, p.userResource.GetName())
 	if err != nil {
 		return nil, err
 	}
 	return privList, nil
 }
 
-func (p *Postgres) userRolesQuery(ctx context.Context) ([]authv1alpha1.Privilege, error) {
-	var rolesList []authv1alpha1.Privilege
-
-	queryTemplate := `
-	SELECT b.rolname as privilege_type
-	FROM pg_catalog.pg_auth_members m
-	JOIN pg_catalog.pg_roles b ON (m.roleid = b.oid)
-	WHERE m.member =
-		(SELECT oid
-		 FROM pg_catalog.pg_roles r
-		 WHERE r.rolname = $1)`
-
-	err := p.conn.Select(ctx, &rolesList, queryTemplate, p.userResource.Spec.Name)
-	if err != nil {
-		return nil, err
-	}
-	return rolesList, nil
-}
-
-func (p *Postgres) getDBUserRoles(ctx context.Context) (map[authv1alpha1.Privilege]struct{}, error) {
-	rolesList, err := p.userRolesQuery(ctx)
-	if err != nil {
-		return nil, err
-	}
-	dbPrivsList, err := p.userDBPrivsQuery(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	roles := make(map[authv1alpha1.Privilege]struct{})
-	for _, role := range append(rolesList, dbPrivsList...) {
-		roles[role] = struct{}{}
-	}
-	p.logger.Info(fmt.Sprintf("Getted roles for DB user %s: %v", p.userResource.Spec.Name, roles))
-	return roles, nil
-}
-
-func (p *Postgres) revokeNotDefinedAndAssignDefinedRoles(ctx context.Context, dbPrivsMap map[authv1alpha1.Privilege]struct{}) error {
+func (p *Postgres) revokeNotDefinedAndAssignDefinedRoles(ctx context.Context, dbPrivsMap map[authv1alpha1.Privilege]struct{}, onDelete bool) error {
 	privMap := make(map[authv1alpha1.Privilege]struct{})
 	for _, priv := range p.userResource.Spec.Privileges {
 		if priv.On == "" {
 			privMap[priv] = struct{}{}
 		}
 	}
-	return p.revokeNotDefinedAndAssignDefined(ctx, p.conn, dbPrivsMap, privMap)
+	return p.revokeNotDefinedAndAssignDefined(ctx, p.conn, dbPrivsMap, privMap, onDelete)
 }
 
-func (p *Postgres) revokeNotDefinedAndAssignDefined(ctx context.Context, conn *database.DBconnector, dbPrivsMap, privMap map[authv1alpha1.Privilege]struct{}) error {
-	var removeQueryList, assignQueryList []database.Query
-	userEsc := EscapeLiteral(p.userResource.Spec.Name)
-	toCreate, toRevoke := IntersectDefinedPrivsWithDB(privMap, dbPrivsMap)
+func (p *Postgres) revokeNotDefinedAndAssignDefined(ctx context.Context, conn *database.DBconnector, dbPrivsMap, privMap map[authv1alpha1.Privilege]struct{}, onDelete bool) error {
+	var queryList []database.Query
+	userEsc := EscapeLiteral(p.userResource.GetName())
 
-	for _, priv := range toRevoke {
-		revokeQuery := prepareStatementForPriv([]string{"REVOKE %s", "FROM %s"}, priv, userEsc)
-		removeQueryList = append(removeQueryList, database.Query{Query: revokeQuery})
+	if !onDelete {
+		toCreate, toRevoke := IntersectDefinedPrivsWithDB(privMap, dbPrivsMap)
+		revokeQueryList := getQueryListFromPrivsList([]string{"REVOKE %s", "FROM %s"}, toRevoke, userEsc)
+		assignQueryList := getQueryListFromPrivsList([]string{"GRANT %s", "TO %s"}, toCreate, userEsc)
+		queryList = append(revokeQueryList, assignQueryList...)
+	} else {
+		revokePrivList := make([]authv1alpha1.Privilege, len(privMap))
+		i := 0
+		for key := range privMap {
+			revokePrivList[i] = key
+			i++
+		}
+		queryList = getQueryListFromPrivsList([]string{"REVOKE %s", "FROM %s"}, revokePrivList, userEsc)
 	}
-
-	for _, priv := range toCreate {
-		sqlGrant := prepareStatementForPriv([]string{"GRANT %s", "TO %s"}, priv, userEsc)
-		assignQueryList = append(assignQueryList, database.Query{Query: sqlGrant})
-	}
-
-	if queryList := append(removeQueryList, assignQueryList...); len(queryList) > 0 {
-		p.logger.Info("QUERY LIST", "query_list", queryList)
+	if len(queryList) > 0 {
+		p.logger.Info("QUERY LIST for execute in transaction", "QUERY_LIST", queryList)
 		if err := conn.ExecTx(ctx, queryList, []database.NamedQuery{}); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func prepareStatementForPriv(statement []string, priv authv1alpha1.Privilege, userEsc string) string {
-	privEsc, onEsc, databaseEsc := EscapeLiteralWithoutQuotes(string(priv.Privilege)), EscapeLiteral(priv.On), EscapeLiteral(priv.Database)
-	query := fmt.Sprintf(strings.Join(statement, " "), privEsc, userEsc)
-	if priv.On != "" && priv.Database != "" {
-		query = fmt.Sprintf(strings.Join([]string{statement[0], "ON %s", statement[1]}, " "), privEsc, onEsc, userEsc)
-	}
-
-	if priv.On == "" && priv.Database != "" {
-		query = fmt.Sprintf(strings.Join([]string{statement[0], "ON DATABASE %s", statement[1]}, " "), privEsc, databaseEsc, userEsc)
-	}
-	return query
-}
-
-func (p *Postgres) processUserTablePrivileges(ctx context.Context) error {
-	// map[string]map[authv1alpha1.Privilege]struct{}
-	privByDBMap := make(map[string]map[authv1alpha1.Privilege]struct{})
-	for _, priv := range p.userResource.Spec.Privileges {
-		if priv.On != "" && priv.Database != "" {
-			if _, f := privByDBMap[priv.Database]; !f {
-				privByDBMap[priv.Database] = make(map[authv1alpha1.Privilege]struct{})
-			}
-			privByDBMap[priv.Database][priv] = struct{}{}
-		}
-	}
-
-	dbList, err := p.getAllDatabases(ctx)
-	if err != nil {
-		return err
-	}
-
-	for _, dbname := range dbList {
-		if err := p.processUserTablePrivilegesFromDB(ctx, dbname, privByDBMap[dbname]); err != nil {
 			return err
 		}
 	}
@@ -298,30 +343,56 @@ func (p *Postgres) getAllDatabases(ctx context.Context) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	p.logger.Info("Getted databases", "databases", databases)
+	p.logger.Info("Getted databases", "DATABASES", databases)
 	return databases, nil
 }
 
-func (p *Postgres) processUserTablePrivilegesFromDB(ctx context.Context, dbname string, privMap map[authv1alpha1.Privilege]struct{}) error {
-	newconf := p.config.Copy()
-	newconf.Dbname = dbname
-	conn := NewPostgres(newconf, p.configResource, p.userResource, p.client, p.logger)
+func (p *Postgres) generateCertSecretForUser(ctx context.Context) error {
 
-	if err := conn.Connect(ctx); err != nil {
+	if _, err := p.client.GetV1Secret(ctx, p.userResource.GetName(), p.userResource.GetNamespace(), p.logger); errors.IsNotFound(err) {
+		p.logger.Info("Generating certificates for User")
+		certData, err := p.generateDBCertificatesForUser(ctx)
+		if err != nil {
+			p.logger.Error(err, "Failed to generate new certificates for User '"+p.userResource.GetName()+"' in namespace '"+p.userResource.GetNamespace()+"'")
+			return err
+		}
+
+		if err := p.client.CreateV1Secret(ctx, p.userResource, certData, p.logger); err != nil {
+			p.logger.Error(err, "Failed to create new v1.Secret")
+			return err
+		}
+		p.logger.Info("Successfully generated certificates for DB User")
+		return nil
+	} else if err != nil {
 		return err
 	}
-	defer conn.Close(ctx)
+	p.logger.Info("Certificates already generated")
+	return nil
+}
 
-	var tablePrivs []authv1alpha1.Privilege
-	err := conn.conn.Select(ctx, &tablePrivs, "SELECT privilege_type, table_catalog, table_name from information_schema.role_table_grants where grantee = $1", p.userResource.Spec.Name)
+func (p *Postgres) deleteCertSecretForUser(ctx context.Context) error {
+	secretResource, err := p.client.GetV1Secret(ctx, p.userResource.GetName(), p.userResource.GetNamespace(), p.logger)
+	if errors.IsNotFound(err) {
+		p.logger.Info("Certificates secret for DB user already deleted")
+		return err
+	} else if err != nil {
+		return err
+	}
+
+	if err := p.client.DeleteV1Secret(ctx, secretResource, p.logger); err != nil {
+		p.logger.Error(err, "Failed to delete v1.Secret for DB user")
+		return err
+	}
+	p.logger.Info("Successfully deleted certificates secret for DB User")
+	return nil
+
+}
+
+func (p *Postgres) generateDBCertificatesForUser(ctx context.Context) (map[string][]byte, error) {
+	postgresCAKeySecret, err := p.client.GetV1Secret(ctx, p.configResource.SSLCredentials.CASecret.Name, p.configResource.SSLCredentials.CASecret.Namespace, p.logger)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	p.logger.Info("DB user table privs", "table_privs", tablePrivs)
-	tablePrivsMap := make(map[authv1alpha1.Privilege]struct{})
-	for _, priv := range tablePrivs {
-		tablePrivsMap[priv] = struct{}{}
-	}
-
-	return p.revokeNotDefinedAndAssignDefined(ctx, conn.conn, tablePrivsMap, privMap)
+	maps.Copy(postgresCAKeySecret.Data, p.postgresRootData)
+	return GenPostgresCertFromCA(p.userResource.GetName(), postgresCAKeySecret.Data)
 }

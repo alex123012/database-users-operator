@@ -22,12 +22,16 @@ import (
 	authv1alpha1 "github.com/alex123012/database-users-operator/api/v1alpha1"
 	"github.com/go-logr/logr"
 	v1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type KubeInterface interface {
 	CreateV1Secret(ctx context.Context, resourceReference *authv1alpha1.User, data map[string][]byte, logger logr.Logger) error
 	GetV1Secret(ctx context.Context, name, namespace string, logger logr.Logger) (*v1.Secret, error)
-	DeleteV1Secret(ctx context.Context, secretResource v1.Secret, logger logr.Logger) error
+	DeleteV1Secret(ctx context.Context, secretResource *v1.Secret, logger logr.Logger) error
+	client.Reader
+	client.Writer
+	client.StatusClient
 }
 
 type DatabaseInterface interface {
