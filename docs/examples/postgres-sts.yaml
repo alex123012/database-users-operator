@@ -1,0 +1,57 @@
+---
+# PostgreSQL StatefulSet
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgresql-db
+  namespace: test-database-users-operator
+spec:
+  serviceName: postgres
+  selector:
+    matchLabels:
+      app: postgresql-db
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: postgresql-db
+    spec:
+      containers:
+        - name: postgresql-db
+          image: postgres:15
+          env:
+            - name: POSTGRES_PASSWORD
+              value: testpassword
+            - name: PGDATA
+              value: /data/pgdata
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: test-database-users-operator
+spec:
+  selector:
+    app: postgresql-db
+  ports:
+    - port: 5432
+      targetPort: 5432
+---
+kind: Secret
+type: Opaque
+apiVersion: v1
+metadata:
+  name: postgres
+  namespace: test-database-users-operator
+stringData:
+  password: testpassword
+
+---
+kind: Secret
+type: Opaque
+apiVersion: v1
+metadata:
+  name: postgres-john
+  namespace: test-database-users-operator
+stringData:
+  password: TestPassword
