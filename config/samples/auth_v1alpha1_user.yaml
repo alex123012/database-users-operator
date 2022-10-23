@@ -2,9 +2,8 @@
 apiVersion: auth.alex123012.com/v1alpha1
 kind: User
 metadata:
-  name: postgres-john
+  name: john
 spec:
-  name: "john"
   passwordSecret:
     name: postgres-john
     namespace: default

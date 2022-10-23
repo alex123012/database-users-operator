@@ -47,11 +47,6 @@ spec:
                   - namespace
                   type: object
                 type: array
-              name:
-                description: Name is appropriate database user name. If not provided
-                  - operator automatically substitutes this parameter with CR name
-                  (Comming soon) TODO
-                type: string
               passwordSecret:
                 properties:
                   name:
