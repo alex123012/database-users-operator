@@ -155,7 +155,74 @@ Now exit from containers psql and create example config and user resources:
 ```bash
 kubectl apply -f https://raw.githubusercontent.com/alex123012/database-users-operator/main/docs/examples/postgres-user-example.yaml
 ```
-![postgres-user-example.yaml](docs/examples/postgres-user-example.yaml)
+
+CR for Config
+```yaml
+---
+apiVersion: auth.alex123012.com/v1alpha1
+kind: Config
+metadata:
+  name: postgres # name to use in .spec.databaseConfig field in User CR
+spec:
+  databaseType: PostgreSQL # Database type (currently supported is only PostgreSQL)
+  postgreSQL: # Config for databaseType 'PostgreSQL'
+    # Name of service without any additional domains
+    # (postgres.dev or postgres.dev.svc.cluster.local wouldn't work)
+    host: postgres
+    # Database port to connect
+    port: 5432
+    # Namespace of database service
+    namespace: test-database-users-operator
+    # User with privileges to create and update roles
+    user: postgres
+    # SSL mode to use (refer to https://www.postgresql.org/docs/current/libpq-ssl.html#LIBPQ-SSL-PROTECTION)
+    sslMode: disable
+    # Secret with key 'password' for user provided in field .spec.user
+    passwordSecret:
+      name: postgres
+      namespace: test-database-users-operator
+    # SSL secrets config (will be used
+    # if .spec.sslMode == ("verify-ca" || "required" || "verify-full"))
+    # sslSecrets:
+    #   userSecret:
+    #     name: postgres-user-keypair
+    #     namespace: test-database-users-operator
+    #   caSecret:
+    #     name: postgres-ca-key
+    #     namespace: test-database-users-operator
+```
+
+CR for user:
+```yaml
+---
+apiVersion: auth.alex123012.com/v1alpha1
+kind: User
+metadata:
+  name: john # This name will be used for user(role) in database
+  namespace: test-database-users-operator
+spec:
+  passwordSecret:
+    # secret with key 'password' containing user password to assign
+    name: postgres-john
+    namespace: test-database-users-operator
+  privileges: # List of applyable privileges
+    # This privilege will be applied on database test
+    # like `GRANT CREATE ON DATABASE test TO john`
+    - privilege: CREATE
+      database: test
+    # This privilege will be applied on table persons in database test
+    # like `GRANT INSERT ON persons TO john`
+    - privilege: INSERT
+      "on": persons
+      database: test
+    # This privilege will be applied as role for user
+    # like `GRANT postgres TO john`
+    - privilege: postgres
+  # List of database configs to use (refer to upper yaml manifest)
+  databaseConfig:
+    - name: postgres
+      namespace: test-database-users-operator
+```
 ```text
 config.auth.alex123012.com/postgres created
 user.auth.alex123012.com/john created
