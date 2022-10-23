@@ -218,7 +218,7 @@ spec:
     # This privilege will be applied as role for user
     # like `GRANT postgres TO john`
     - privilege: postgres
-  # List of database configs to use (refer to upper yaml manifest)
+  # List of database configs to use (refer to above yaml manifest)
   databaseConfig:
     - name: postgres
       namespace: test-database-users-operator
