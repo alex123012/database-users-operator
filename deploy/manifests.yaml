@@ -51,8 +51,6 @@ spec:
                     type: string
                   host:
                     type: string
-                  namespace:
-                    type: string
                   passwordSecret:
                     properties:
                       name:
@@ -85,7 +83,6 @@ spec:
                     type: string
                 required:
                 - host
-                - namespace
                 - port
                 - user
                 type: object

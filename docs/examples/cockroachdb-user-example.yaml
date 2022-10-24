@@ -3,12 +3,12 @@ apiVersion: auth.alex123012.com/v1alpha1
 kind: Config
 metadata:
   name: cockroachdb
+  namespace: test-database-users-operator
 spec:
   databaseType: PostgreSQL
   postgreSQL:
-    host: cockroachdb-public
+    host: cockroachdb-public.test-database-users-operator.svc.cluster.local
     port: 26257
-    namespace: test-database-users-operator
     user: root
     sslMode: verify-full
     sslSecrets:

@@ -39,9 +39,9 @@ const (
 )
 
 type PostgreSQLConfig struct {
-	Host           string                   `json:"host"`
-	Port           int                      `json:"port"`
-	Namespace      string                   `json:"namespace"`
+	Host string `json:"host"`
+	Port int    `json:"port"`
+	// Namespace      string                   `json:"namespace"`
 	User           string                   `json:"user"`
 	SSLMode        database.PostgresSSLMode `json:"sslMode,omitempty"`
 	ClusterName    string                   `json:"clusterName,omitempty"`

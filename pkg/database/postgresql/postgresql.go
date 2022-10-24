@@ -19,10 +19,8 @@ type processhandler = func(context.Context, bool) error
 
 func NewPostgresFromConfig(config *authv1alpha1.Config, userResource *authv1alpha1.User, client common.KubeInterface, logger logr.Logger) common.DatabaseInterface {
 	configResource := &config.Spec.PostgreSQL
-	newConfig := NewPostgresConfig(fmt.Sprintf("%s.%s.svc.cluster.local", configResource.Host, configResource.Namespace),
-		configResource.Port,
-		configResource.User, "",
-		configResource.DatabaseName, configResource.SSLMode, "", "", "")
+	newConfig := NewPostgresConfig(configResource.Host, configResource.Port, configResource.User,
+		"", configResource.DatabaseName, configResource.SSLMode, "", "", "")
 	return NewPostgres(newConfig, configResource, userResource, client, logger)
 }
 

@@ -1,7 +1,12 @@
+### **In active development**
 # Database Users Kubernetes Operator
 
 Kubernetes operator to create and manage users and roles for various SQL and NoSQL databases (currently supports PostgreSQL, CockroachDB). This repository contains a [custom controller](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/#custom-controllers) and [custom resource definition (CRD)](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/#customresourcedefinitions) designed for the lifecycle (creation, update privileges, deletion) of a different databases users/roles.
-
+# Features
+* Currently supports PostgreSQL (roles, table privileges, database privileges) and CockroachDB (roles and table privileges, database privileges not working properly)
+* Create users/roles and assign privileges to them in databases
+* Change users/roles privileges in databases in runtime
+* Delete user/role in databases when custom resource is deleted
 # Prerequisites
 
 1. Kubernetes cluster to run against. You can use [KIND](https://sigs.k8s.io/kind) to get a local cluster for testing, or run against a remote cluster.
@@ -47,8 +52,7 @@ in all available namespaces.
 ```text
 namespace/database-users-operator-system created
 customresourcedefinition.apiextensions.k8s.io/configs.auth.alex123012.com created
-Warning: Detected changes to resource users.auth.alex123012.com which is currently being deleted.
-customresourcedefinition.apiextensions.k8s.io/users.auth.alex123012.com unchanged
+customresourcedefinition.apiextensions.k8s.io/users.auth.alex123012.com created
 serviceaccount/database-users-operator-controller-manager created
 clusterrole.rbac.authorization.k8s.io/database-users-operator-manager-role created
 clusterrolebinding.rbac.authorization.k8s.io/database-users-operator-manager-rolebinding created
@@ -66,7 +70,7 @@ database-users-operator-controller-manager-777dcc4765-nb76m   1/1     Running   
 ```
 # Examples
 
-There are several ready-to-use [User and Config examples][docs/examples]. Below are a few to start with.
+There are several ready-to-use [User and Config examples](docs/examples). Below are a few to start with.
 
 ## Create Custom Namespace
 It is a good practice to have all components run in dedicated namespaces. Let's run examples in `test-database-users-operator` namespace
@@ -151,7 +155,7 @@ CREATE TABLE Persons (
 CREATE TABLE
 ```
 
-Now exit from containers psql and create example config and user resources:
+Now exit from postgres pod and create example config and user resources:
 ```bash
 kubectl apply -f https://raw.githubusercontent.com/alex123012/database-users-operator/main/docs/examples/postgres-user-example.yaml
 ```
@@ -163,16 +167,15 @@ apiVersion: auth.alex123012.com/v1alpha1
 kind: Config
 metadata:
   name: postgres # name to use in .spec.databaseConfig field in User CR
+  namespace: test-database-users-operator # namespace to use in .spec.databaseConfig field in User CR
 spec:
   databaseType: PostgreSQL # Database type (currently supported is only PostgreSQL)
   postgreSQL: # Config for databaseType 'PostgreSQL'
-    # Name of service without any additional domains
-    # (postgres.dev or postgres.dev.svc.cluster.local wouldn't work)
-    host: postgres
+    # Full name of service with namespace and internal cluster domain
+    # or external domain/ip for database
+    host: postgres.test-database-users-operator.svc.cluster.local
     # Database port to connect
     port: 5432
-    # Namespace of database service
-    namespace: test-database-users-operator
     # User with privileges to create and update roles
     user: postgres
     # SSL mode to use (refer to https://www.postgresql.org/docs/current/libpq-ssl.html#LIBPQ-SSL-PROTECTION)
@@ -339,23 +342,35 @@ namespace "test-database-users-operator" deleted
 
 Refer to [docs/examples/](docs/examples/) directory to check another DB types (CockroachDB) config and user CR
 # Development
-You’ll need a Kubernetes cluster to run against. You can use [KIND](https://sigs.k8s.io/kind) to get a local cluster for testing, or run against a remote cluster.
-**Note:** Your controller will automatically use the current context in your kubeconfig file (i.e. whatever cluster `kubectl cluster-info` shows).
 
 ## Running on the cluster
-1. Install Instances of Custom Resources:
+* Install the CRDs into the cluster:
+
+```sh
+make install
+```
+
+* Run your controller (this will run in the foreground, so switch to a new terminal if you want to leave it running):
+
+```sh
+make run
+```
+
+**NOTE:** You can also run this in one step by running: `make install run`
+
+* Install Instances of Custom Resources:
 
 ```sh
 kubectl apply -f config/samples/
 ```
 
-2. Build and push your image to the location specified by `IMG`:
+* Build and push your image to the location specified by `IMG`:
 
 ```sh
 make docker-build docker-push IMG=<some-registry>/database-users-operator:tag
 ```
 
-3. Deploy the controller to the cluster with the image specified by `IMG`:
+* Deploy the controller to the cluster with the image specified by `IMG`:
 
 ```sh
 make deploy IMG=<some-registry>/database-users-operator:tag
@@ -383,21 +398,6 @@ This project aims to follow the Kubernetes [Operator pattern](https://kubernetes
 
 It uses [Controllers](https://kubernetes.io/docs/concepts/architecture/controller/)
 which provides a reconcile function responsible for synchronizing resources untile the desired state is reached on the cluster
-
-## Test It Out
-1. Install the CRDs into the cluster:
-
-```sh
-make install
-```
-
-2. Run your controller (this will run in the foreground, so switch to a new terminal if you want to leave it running):
-
-```sh
-make run
-```
-
-**NOTE:** You can also run this in one step by running: `make install run`
 
 ## Modifying the API definitions
 If you are editing the API definitions, generate the manifests such as CRs or CRDs using:
@@ -437,6 +437,7 @@ for key in $(kubectl get secrets ${secret_name} -oyaml | yq '.data | keys | .[]'
 # TODO
 - [x] Auto remove user from all dbs listed in databaseConfig when User CR deleted
 - [ ] Add webhook validation for config and user CR
+- [ ] Fix CockroachDB database privileges
 - [ ] Create events for user CR
 - [ ] Create status updates for user CR
 - [ ] Auto delete user from DB on databaseConfig entry remove from User CR
