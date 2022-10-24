@@ -3,16 +3,15 @@ apiVersion: auth.alex123012.com/v1alpha1
 kind: Config
 metadata:
   name: postgres # name to use in .spec.databaseConfig field in User CR
+  namespace: test-database-users-operator # namespace to use in .spec.databaseConfig field in User CR
 spec:
   databaseType: PostgreSQL # Database type (currently supported is only PostgreSQL)
   postgreSQL: # Config for databaseType 'PostgreSQL'
-    # Name of service without any additional domains
-    # (postgres.dev or postgres.dev.svc.cluster.local wouldn't work)
-    host: postgres
+    # Full name of service with namespace and internal cluster domain
+    # or external domain/ip for database
+    host: postgres.test-database-users-operator.svc.cluster.local
     # Database port to connect
     port: 5432
-    # Namespace of database service
-    namespace: test-database-users-operator
     # User with privileges to create and update roles
     user: postgres
     # SSL mode to use (refer to https://www.postgresql.org/docs/current/libpq-ssl.html#LIBPQ-SSL-PROTECTION)
