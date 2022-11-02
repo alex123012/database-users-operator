@@ -107,7 +107,11 @@ func (d *DBconnector) ExecTx(ctx context.Context, queryList []Query, namedQuery 
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err := tx.Rollback(); err != nil {
+			d.logger.Error(err, "Rollback tx error")
+		}
+	}()
 	for _, q := range queryList {
 		args := d.infoLog(q.Query, q.Args)
 		if err := exec(ctx, tx, q.Query, args...); err != nil {

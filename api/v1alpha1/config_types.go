@@ -44,7 +44,7 @@ type PostgreSQLConfig struct {
 	// Full DNS name/ip for database to use, required.
 	// If K8S service is used to connect - provide host
 	// as <db-service-name>.<db-service-namespace>.svc.cluster.local
-	// refer to --dbname flag in https://www.postgresql.org/docs/current/app-psql.html
+	// refer to --host flag in https://www.postgresql.org/docs/current/app-psql.html
 	Host string `json:"host"`
 
 	// k8s-service/database port to connect to execute queries, defaults to 5432.

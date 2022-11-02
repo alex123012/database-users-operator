@@ -14,6 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+/*
+This is simple hook for generating users certificates for CockroachDB databases
+deployed via cockroachdb-operator (From this hook operator was started)
+*/
+
 package main
 
 import (

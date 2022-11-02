@@ -49,7 +49,7 @@ spec:
                   host:
                     description: Full DNS name/ip for database to use, required. If
                       K8S service is used to connect - provide host as <db-service-name>.<db-service-namespace>.svc.cluster.local
-                      refer to --dbname flag in https://www.postgresql.org/docs/current/app-psql.html
+                      refer to --host flag in https://www.postgresql.org/docs/current/app-psql.html
                     type: string
                   passwordSecret:
                     description: Secret with password for User to connect to database
