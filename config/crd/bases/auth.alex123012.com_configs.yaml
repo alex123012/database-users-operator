@@ -36,53 +36,104 @@ spec:
             description: ConfigSpec defines the desired state of Config
             properties:
               databaseType:
+                description: Type of database to connect, required
                 type: string
               postgreSQL:
+                description: Config for connecting for PostgreSQL compatible databases,
+                  not required. required if DatabaseType equals to "PostgreSQL"
                 properties:
-                  clusterName:
-                    type: string
                   databaseName:
+                    description: Database name that will be used to connect to database,
+                      not required refer to --dbname flag in https://www.postgresql.org/docs/current/app-psql.html
                     type: string
                   host:
+                    description: Full DNS name/ip for database to use, required. If
+                      K8S service is used to connect - provide host as <db-service-name>.<db-service-namespace>.svc.cluster.local
+                      refer to --host flag in https://www.postgresql.org/docs/current/app-psql.html
                     type: string
                   passwordSecret:
+                    description: Secret with password for User to connect to database
+                      If SSL Mode equals to "disable", "allow" or "prefer" field is
+                      required. If SSL Mode equals to "require", "verify-ca" or "verify-full"
+                      - not required.
                     properties:
                       name:
+                        description: Kubernetes secret name, required
                         type: string
                       namespace:
+                        description: Kubernetes secret namespace, required
                         type: string
+                    required:
+                    - name
+                    - namespace
                     type: object
                   port:
+                    description: k8s-service/database port to connect to execute queries,
+                      defaults to 5432. refer to --port flag in https://www.postgresql.org/docs/current/app-psql.html
                     type: integer
                   sslMode:
+                    description: 'SSL mode that will be used to connect to PostgreSQL,
+                      defaults to "disable". Posssible values: "disable", "allow",
+                      "prefer", "require", "verify-ca", "verify-full". If SSL mode
+                      is "require", "verify-ca", "verify-full" - operator will generate
+                      K8S secret with SSL bundle (CA certificate, user certificate
+                      and user key) for User CR with same name as User CR. see https://www.postgresql.org/docs/current/libpq-ssl.html'
                     type: string
                   sslSecrets:
+                    description: SSL CA certificate, user certificate and user key
+                      K8S secrets. If SSL Mode equals to "disable", "allow" or "prefer"
+                      field is not required. If SSL Mode equals to "require", "verify-ca"
+                      or "verify-full" - required.
                     properties:
                       caSecret:
+                        description: for user certificate - secrets data key must
+                          be "tls.crt" for user key - secrets data key must be "tls.key"
                         properties:
                           name:
+                            description: Kubernetes secret name, required
                             type: string
                           namespace:
+                            description: Kubernetes secret namespace, required
                             type: string
+                        required:
+                        - name
+                        - namespace
                         type: object
                       userSecret:
+                        description: for CA certificate - secrets data key must be
+                          "ca.crt"
                         properties:
                           name:
+                            description: Kubernetes secret name, required
                             type: string
                           namespace:
+                            description: Kubernetes secret namespace, required
                             type: string
+                        required:
+                        - name
+                        - namespace
                         type: object
+                    required:
+                    - caSecret
+                    - userSecret
                     type: object
                   user:
+                    description: User that will be used to connect to database, defaults
+                      to "postgres". It must have at least CREATEROLE privilege (if
+                      you won't provide superuser acess to users) or database superuser
+                      role if you think you'll be needed to give some users database
+                      superuser privileges refer to --username flag in https://www.postgresql.org/docs/current/app-psql.html
+                      and https://www.postgresql.org/docs/current/sql-grant.html "GRANT
+                      on Roles"
                     type: string
                 required:
                 - host
                 - port
+                - sslMode
                 - user
                 type: object
             required:
             - databaseType
-            - postgreSQL
             type: object
           status:
             description: ConfigStatus defines the observed state of Config

@@ -9,10 +9,20 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
+    cert-manager.io/inject-ca-from: database-users-operator-system/database-users-operator-serving-cert
     controller-gen.kubebuilder.io/version: v0.9.2
-  creationTimestamp: null
   name: configs.auth.alex123012.com
 spec:
+  conversion:
+    strategy: Webhook
+    webhook:
+      clientConfig:
+        service:
+          name: database-users-operator-webhook-service
+          namespace: database-users-operator-system
+          path: /convert
+      conversionReviewVersions:
+      - v1
   group: auth.alex123012.com
   names:
     kind: Config
@@ -42,53 +52,104 @@ spec:
             description: ConfigSpec defines the desired state of Config
             properties:
               databaseType:
+                description: Type of database to connect, required
                 type: string
               postgreSQL:
+                description: Config for connecting for PostgreSQL compatible databases,
+                  not required. required if DatabaseType equals to "PostgreSQL"
                 properties:
-                  clusterName:
-                    type: string
                   databaseName:
+                    description: Database name that will be used to connect to database,
+                      not required refer to --dbname flag in https://www.postgresql.org/docs/current/app-psql.html
                     type: string
                   host:
+                    description: Full DNS name/ip for database to use, required. If
+                      K8S service is used to connect - provide host as <db-service-name>.<db-service-namespace>.svc.cluster.local
+                      refer to --host flag in https://www.postgresql.org/docs/current/app-psql.html
                     type: string
                   passwordSecret:
+                    description: Secret with password for User to connect to database
+                      If SSL Mode equals to "disable", "allow" or "prefer" field is
+                      required. If SSL Mode equals to "require", "verify-ca" or "verify-full"
+                      - not required.
                     properties:
                       name:
+                        description: Kubernetes secret name, required
                         type: string
                       namespace:
+                        description: Kubernetes secret namespace, required
                         type: string
+                    required:
+                    - name
+                    - namespace
                     type: object
                   port:
+                    description: k8s-service/database port to connect to execute queries,
+                      defaults to 5432. refer to --port flag in https://www.postgresql.org/docs/current/app-psql.html
                     type: integer
                   sslMode:
+                    description: 'SSL mode that will be used to connect to PostgreSQL,
+                      defaults to "disable". Posssible values: "disable", "allow",
+                      "prefer", "require", "verify-ca", "verify-full". If SSL mode
+                      is "require", "verify-ca", "verify-full" - operator will generate
+                      K8S secret with SSL bundle (CA certificate, user certificate
+                      and user key) for User CR with same name as User CR. see https://www.postgresql.org/docs/current/libpq-ssl.html'
                     type: string
                   sslSecrets:
+                    description: SSL CA certificate, user certificate and user key
+                      K8S secrets. If SSL Mode equals to "disable", "allow" or "prefer"
+                      field is not required. If SSL Mode equals to "require", "verify-ca"
+                      or "verify-full" - required.
                     properties:
                       caSecret:
+                        description: for user certificate - secrets data key must
+                          be "tls.crt" for user key - secrets data key must be "tls.key"
                         properties:
                           name:
+                            description: Kubernetes secret name, required
                             type: string
                           namespace:
+                            description: Kubernetes secret namespace, required
                             type: string
+                        required:
+                        - name
+                        - namespace
                         type: object
                       userSecret:
+                        description: for CA certificate - secrets data key must be
+                          "ca.crt"
                         properties:
                           name:
+                            description: Kubernetes secret name, required
                             type: string
                           namespace:
+                            description: Kubernetes secret namespace, required
                             type: string
+                        required:
+                        - name
+                        - namespace
                         type: object
+                    required:
+                    - caSecret
+                    - userSecret
                     type: object
                   user:
+                    description: User that will be used to connect to database, defaults
+                      to "postgres". It must have at least CREATEROLE privilege (if
+                      you won't provide superuser acess to users) or database superuser
+                      role if you think you'll be needed to give some users database
+                      superuser privileges refer to --username flag in https://www.postgresql.org/docs/current/app-psql.html
+                      and https://www.postgresql.org/docs/current/sql-grant.html "GRANT
+                      on Roles"
                     type: string
                 required:
                 - host
                 - port
+                - sslMode
                 - user
                 type: object
             required:
             - databaseType
-            - postgreSQL
             type: object
           status:
             description: ConfigStatus defines the observed state of Config
@@ -103,10 +164,20 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
+    cert-manager.io/inject-ca-from: database-users-operator-system/database-users-operator-serving-cert
     controller-gen.kubebuilder.io/version: v0.9.2
-  creationTimestamp: null
   name: users.auth.alex123012.com
 spec:
+  conversion:
+    strategy: Webhook
+    webhook:
+      clientConfig:
+        service:
+          name: database-users-operator-webhook-service
+          namespace: database-users-operator-system
+          path: /convert
+      conversionReviewVersions:
+      - v1
   group: auth.alex123012.com
   names:
     kind: User
@@ -135,12 +206,16 @@ spec:
           spec:
             description: UserSpec defines the desired state of User
             properties:
-              databaseConfig:
+              databaseConfigs:
+                description: List of Configs that will be used to create users
                 items:
+                  description: Utility struct for Config CR specification
                   properties:
                     name:
+                      description: Name of Config resource
                       type: string
                     namespace:
+                      description: Namespace of config resource
                       type: string
                   required:
                   - name
@@ -148,21 +223,34 @@ spec:
                   type: object
                 type: array
               passwordSecret:
+                description: K8S secret with key "password" for user password to assign,
+                  not required
                 properties:
                   name:
+                    description: Kubernetes secret name, required
                     type: string
                   namespace:
+                    description: Kubernetes secret namespace, required
                     type: string
+                required:
+                - name
+                - namespace
                 type: object
               privileges:
-                description: Privileges
+                description: List of database privileges that will be applied to user.
+                  If user already exists in database - all it privileges will be synchronized
+                  with this list (all privileges that are not defined in the lis will
+                  be revoked).
                 items:
                   properties:
                     database:
+                      description: If Privilege is database specific - this field
+                        will be used to determine which db to use (used PrivilegeType
+                        from PrivilegeTypeDatabase or PrivilegeTypeTable)
                       type: string
                     "on":
-                      description: if used PrivilegeType from PrivilegeTypeMap in
-                        Privilege specify object to give Privilege to
+                      description: if used PrivilegeType from PrivilegeTypeTable in
+                        Privilege field specify object to give Privilege to in database
                       type: string
                     privilege:
                       description: Privilege is role name or PrivilegeType
@@ -171,15 +259,9 @@ spec:
                   - privilege
                   type: object
                 type: array
-              sslSecret:
-                properties:
-                  name:
-                    type: string
-                  namespace:
-                    type: string
-                type: object
             required:
-            - databaseConfig
+            - databaseConfigs
+            - privileges
             type: object
           status:
             description: UserStatus defines the observed state of User
@@ -267,33 +349,17 @@ subjects:
   namespace: database-users-operator-system
 ---
 apiVersion: v1
-data:
-  controller_manager_config.yaml: |
-    apiVersion: controller-runtime.sigs.k8s.io/v1alpha1
-    kind: ControllerManagerConfig
-    health:
-      healthProbeBindAddress: :8081
-    metrics:
-      bindAddress: 127.0.0.1:8080
-    webhook:
-      port: 9443
-    leaderElection:
-      leaderElect: false
-      resourceName: 2da85013.alex123012.com
-    # leaderElectionReleaseOnCancel defines if the leader should step down volume
-    # when the Manager ends. This requires the binary to immediately end when the
-    # Manager is stopped, otherwise, this setting is unsafe. Setting this significantly
-    # speeds up voluntary leader transitions as the new leader don't have to wait
-    # LeaseDuration time first.
-    # In the default scaffold provided, the program ends immediately after
-    # the manager stops, so would be fine to enable this option. However,
-    # if you are doing or is intended to do any operation such as perform cleanups
-    # after the manager stops then its usage might be unsafe.
-    # leaderElectionReleaseOnCancel: true
-kind: ConfigMap
+kind: Service
 metadata:
-  name: database-users-operator-manager-config
+  name: database-users-operator-webhook-service
   namespace: database-users-operator-system
+spec:
+  ports:
+  - port: 443
+    protocol: TCP
+    targetPort: 9443
+  selector:
+    control-plane: controller-manager
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -317,7 +383,7 @@ spec:
       containers:
       - command:
         - /manager
-        image: alexeymakhonin/database-users-operator:v0.0.1
+        image: ghcr.io/alex123012/database-users-operator:v0.0.3
         livenessProbe:
           httpGet:
             path: /healthz
@@ -325,6 +391,10 @@ spec:
           initialDelaySeconds: 15
           periodSeconds: 20
         name: manager
+        ports:
+        - containerPort: 9443
+          name: webhook-server
+          protocol: TCP
         readinessProbe:
           httpGet:
             path: /readyz
@@ -343,7 +413,134 @@ spec:
           capabilities:
             drop:
             - ALL
+        volumeMounts:
+        - mountPath: /tmp/k8s-webhook-server/serving-certs
+          name: cert
+          readOnly: true
       securityContext:
         runAsNonRoot: true
       serviceAccountName: database-users-operator-controller-manager
       terminationGracePeriodSeconds: 10
+      volumes:
+      - name: cert
+        secret:
+          defaultMode: 420
+          secretName: webhook-server-cert
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: database-users-operator-serving-cert
+  namespace: database-users-operator-system
+spec:
+  dnsNames:
+  - database-users-operator-webhook-service.database-users-operator-system.svc
+  - database-users-operator-webhook-service.database-users-operator-system.svc.cluster.local
+  issuerRef:
+    kind: Issuer
+    name: database-users-operator-selfsigned-issuer
+  secretName: webhook-server-cert
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: database-users-operator-selfsigned-issuer
+  namespace: database-users-operator-system
+spec:
+  selfSigned: {}
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  annotations:
+    cert-manager.io/inject-ca-from: database-users-operator-system/database-users-operator-serving-cert
+  name: database-users-operator-mutating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: database-users-operator-webhook-service
+      namespace: database-users-operator-system
+      path: /mutate-auth-alex123012-com-v1alpha1-config
+  failurePolicy: Fail
+  name: mconfig.kb.io
+  rules:
+  - apiGroups:
+    - auth.alex123012.com
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - configs
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: database-users-operator-webhook-service
+      namespace: database-users-operator-system
+      path: /mutate-auth-alex123012-com-v1alpha1-user
+  failurePolicy: Fail
+  name: muser.kb.io
+  rules:
+  - apiGroups:
+    - auth.alex123012.com
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - users
+  sideEffects: None
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  annotations:
+    cert-manager.io/inject-ca-from: database-users-operator-system/database-users-operator-serving-cert
+  name: database-users-operator-validating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: database-users-operator-webhook-service
+      namespace: database-users-operator-system
+      path: /validate-auth-alex123012-com-v1alpha1-config
+  failurePolicy: Fail
+  name: vconfig.kb.io
+  rules:
+  - apiGroups:
+    - auth.alex123012.com
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - configs
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: database-users-operator-webhook-service
+      namespace: database-users-operator-system
+      path: /validate-auth-alex123012-com-v1alpha1-user
+  failurePolicy: Fail
+  name: vuser.kb.io
+  rules:
+  - apiGroups:
+    - auth.alex123012.com
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - users
+  sideEffects: None

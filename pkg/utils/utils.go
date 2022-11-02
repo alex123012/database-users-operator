@@ -59,7 +59,10 @@ func CreateFileFromBytes(path string, buffer []byte) error {
 	}
 	defer f.Close()
 
-	f.Chmod(0600)
+	if err := f.Chmod(0600); err != nil {
+		return err
+	}
+
 	_, err = f.Write(buffer)
 	if err != nil {
 		return err

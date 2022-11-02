@@ -178,7 +178,7 @@ func (r *UserReconciler) runErrGroup(ctx context.Context, userResource *authv1al
 	logger logr.Logger,
 	fn func(context.Context, *authv1alpha1.User, authv1alpha1.DatabaseConfig, logr.Logger) error,
 ) error {
-	for _, dbConfig := range userResource.Spec.DatabaseConfig {
+	for _, dbConfig := range userResource.Spec.DatabaseConfigs {
 		tmpDbconfig := dbConfig
 		errorGroup.Go(func() error {
 			return fn(ctx, userResource, tmpDbconfig, logger.WithValues("DATABASE", tmpDbconfig.Name))

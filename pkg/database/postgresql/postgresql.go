@@ -110,9 +110,13 @@ func (p *Postgres) ProcessUser(ctx context.Context) error {
 	if err := p.Connect(ctx); err != nil {
 		return err
 	}
-	defer utils.DeleteFile(p.config.SSLUserCert)
-	defer utils.DeleteFile(p.config.SSLUserKey)
-	defer utils.DeleteFile(p.config.SSLCACert)
+	defer func() {
+		for _, filename := range []string{p.config.SSLUserCert, p.config.SSLUserKey, p.config.SSLCACert} {
+			if err := utils.DeleteFile(filename); err != nil {
+				p.logger.Error(err, "Error deleting file")
+			}
+		}
+	}()
 	defer p.Close(ctx)
 
 	if err := p.createUser(ctx); err != nil {
@@ -134,9 +138,13 @@ func (p *Postgres) DeleteUser(ctx context.Context) error {
 	if err := p.Connect(ctx); err != nil {
 		return err
 	}
-	defer utils.DeleteFile(p.config.SSLUserCert)
-	defer utils.DeleteFile(p.config.SSLUserKey)
-	defer utils.DeleteFile(p.config.SSLCACert)
+	defer func() {
+		for _, filename := range []string{p.config.SSLUserCert, p.config.SSLUserKey, p.config.SSLCACert} {
+			if err := utils.DeleteFile(filename); err != nil {
+				p.logger.Error(err, "Error deleting file")
+			}
+		}
+	}()
 	defer p.Close(ctx)
 
 	errGroup, errGroupCtx := errgroup.WithContext(ctx)
@@ -169,7 +177,9 @@ func (p *Postgres) createUser(ctx context.Context) error {
 	}
 
 	if p.createCerts {
-		p.generateCertSecretForUser(ctx)
+		if err := p.generateCertSecretForUser(ctx); err != nil {
+			return err
+		}
 	}
 	return IgnoreAlreadyExists(p.conn.Exec(ctx, sqlCreateUser, database.DisableLogger))
 }
@@ -177,7 +187,9 @@ func (p *Postgres) createUser(ctx context.Context) error {
 func (p *Postgres) deleteUser(ctx context.Context) error {
 	sqlDeleteUser := fmt.Sprintf(`DROP USER %s`, EscapeLiteral(p.userResource.GetName()))
 	if p.createCerts {
-		p.deleteCertSecretForUser(ctx)
+		if err := p.deleteCertSecretForUser(ctx); err != nil {
+			return err
+		}
 	}
 	return p.conn.Exec(ctx, sqlDeleteUser, database.DisableLogger)
 }
