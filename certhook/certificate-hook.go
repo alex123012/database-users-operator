@@ -43,16 +43,31 @@ func (i *userArray) String() string {
 }
 
 func (i *userArray) Set(value string) error {
-	*i = append(*i, value)
+	if strings.Contains(value, ",") {
+		values := strings.Split(value, ",")
+		*i = append(*i, values...)
+	} else {
+		*i = append(*i, value)
+	}
 	return nil
 }
 
 func main() {
 	var users userArray
 	var clusterName, clusterNamespace string
-	flag.Var(&users, "user", "Username for creating client cert for CockroachDB (for multiple users - provide flag for each user).")
-	flag.StringVar(&clusterName, "cockroach-cluster-name", "cockroachdb", "Name of cockroach cluster")
-	flag.StringVar(&clusterNamespace, "cockroach-cluster-namespace", "default", "Namespace of cockroach cluster")
+	flag.Var(&users, "users", "Username for creating client cert for CockroachDB.")
+	flag.StringVar(
+		&clusterName,
+		"cockroach-cluster-name",
+		"cockroachdb",
+		"Name of cockroach cluster",
+	)
+	flag.StringVar(
+		&clusterNamespace,
+		"cockroach-cluster-namespace",
+		"default",
+		"Namespace of cockroach cluster",
+	)
 	flag.Parse()
 
 	ctx := context.Background()
@@ -77,7 +92,13 @@ func main() {
 		}
 	}
 }
-func writeClientSecret(ctx context.Context, clientset coreV1Types.SecretInterface, username, clusterName string, data map[string][]byte) error {
+
+func writeClientSecret(
+	ctx context.Context,
+	clientset coreV1Types.SecretInterface,
+	username, clusterName string,
+	data map[string][]byte,
+) error {
 	secret := &coreV1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: fmt.Sprintf("%s-%s", clusterName, username),
@@ -85,12 +106,15 @@ func writeClientSecret(ctx context.Context, clientset coreV1Types.SecretInterfac
 		Data: data,
 		Type: coreV1.SecretTypeOpaque,
 	}
-	if _, err := clientset.Create(ctx, secret, metav1.CreateOptions{}); errors.IsAlreadyExists(err) {
+	if _, err := clientset.Create(ctx, secret, metav1.CreateOptions{}); errors.IsAlreadyExists(
+		err,
+	) {
 		return nil
 	} else {
 		return err
 	}
 }
+
 func initClient(clusterNamespace string) coreV1Types.SecretInterface {
 	kubeconfig := os.Getenv("HOME") + "/.kube/config"
 	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
@@ -104,27 +128,48 @@ func initClient(clusterNamespace string) coreV1Types.SecretInterface {
 	return clientset.CoreV1().Secrets(clusterNamespace)
 }
 
-func getCaKeyAndcert(ctx context.Context, clientset coreV1Types.SecretInterface, clusterName string) ([]byte, []byte, error) { //(*rsa.PrivateKey, *x509.Certificate, error) {
+func getCaKeyAndcert(
+	ctx context.Context,
+	clientset coreV1Types.SecretInterface,
+	clusterName string,
+) ([]byte, []byte, error) { //(*rsa.PrivateKey, *x509.Certificate, error) {
 	secretCaKey, err := clientset.Get(ctx, fmt.Sprintf("%s-ca", clusterName), metav1.GetOptions{})
 	if err != nil {
 		return nil, nil, err
 	}
 
-	secretCaCert, err := clientset.Get(ctx, fmt.Sprintf("%s-root", clusterName), metav1.GetOptions{})
+	secretCaCert, err := clientset.Get(
+		ctx,
+		fmt.Sprintf("%s-root", clusterName),
+		metav1.GetOptions{},
+	)
 	if err != nil {
 		return nil, nil, err
 	}
 	return secretCaKey.Data["ca.key"], secretCaCert.Data["ca.crt"], nil
 }
 
-func checkAlreadyExists(ctx context.Context, clientset coreV1Types.SecretInterface, clusterName, username string) error {
+func checkAlreadyExists(
+	ctx context.Context,
+	clientset coreV1Types.SecretInterface,
+	clusterName, username string,
+) error {
 	name := fmt.Sprintf("%s-client-%s-user-tls", clusterName, username)
 	if secret, err := clientset.Get(ctx, name, metav1.GetOptions{}); err == nil {
-		return errors.NewAlreadyExists(schema.GroupResource{Group: secret.GroupVersionKind().Group, Resource: secret.Kind}, name)
+		return errors.NewAlreadyExists(
+			schema.GroupResource{Group: secret.GroupVersionKind().Group, Resource: secret.Kind},
+			name,
+		)
 	}
 	return nil
 }
 
-func generateCertificate(username string, caPrivKeyBytes, caCertBytes []byte) (map[string][]byte, error) {
-	return postgresql.GenPostgresCertFromCA(username, map[string][]byte{"ca.key": caPrivKeyBytes, "ca.crt": caCertBytes})
+func generateCertificate(
+	username string,
+	caPrivKeyBytes, caCertBytes []byte,
+) (map[string][]byte, error) {
+	return postgresql.GenPostgresCertFromCA(
+		username,
+		map[string][]byte{"ca.key": caPrivKeyBytes, "ca.crt": caCertBytes},
+	)
 }

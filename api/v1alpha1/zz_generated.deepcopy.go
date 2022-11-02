@@ -257,9 +257,8 @@ func (in *UserList) DeepCopyObject() runtime.Object {
 func (in *UserSpec) DeepCopyInto(out *UserSpec) {
 	*out = *in
 	out.PasswordSecret = in.PasswordSecret
-	out.SSLSecret = in.SSLSecret
-	if in.DatabaseConfig != nil {
-		in, out := &in.DatabaseConfig, &out.DatabaseConfig
+	if in.DatabaseConfigs != nil {
+		in, out := &in.DatabaseConfigs, &out.DatabaseConfigs
 		*out = make([]DatabaseConfig, len(*in))
 		copy(*out, *in)
 	}

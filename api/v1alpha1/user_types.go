@@ -22,77 +22,44 @@ import (
 
 // UserSpec defines the desired state of User
 type UserSpec struct {
-	//
+
+	// K8S secret with key "password" for user password to assign, not required
 	PasswordSecret Secret `json:"passwordSecret,omitempty"`
-	//
-	SSLSecret Secret `json:"sslSecret,omitempty"`
-	//
-	DatabaseConfig []DatabaseConfig `json:"databaseConfig"`
-	// Privileges
-	Privileges []Privilege `json:"privileges,omitempty"`
+
+	// List of Configs that will be used to create users
+	DatabaseConfigs []DatabaseConfig `json:"databaseConfigs"`
+
+	// List of database privileges that will be applied to user.
+	// If user already exists in database - all it privileges will be
+	// synchronized with this list (all privileges that are not defined in the lis will be revoked).
+	Privileges []Privilege `json:"privileges"`
 }
 
+// Utility struct for Config CR specification
 type DatabaseConfig struct {
-	//
+	// Name of Config resource
 	Name string `json:"name"`
-	//
+
+	// Namespace of config resource
 	Namespace string `json:"namespace"`
 }
 
 type Privilege struct {
 	// Privilege is role name or PrivilegeType
 	Privilege PrivilegeType `json:"privilege" postgres:"privilege_type"`
-	// if used PrivilegeType from PrivilegeTypeMap in Privilege specify object to give Privilege to
+
+	// if used PrivilegeType from PrivilegeTypeTable in Privilege field
+	// specify object to give Privilege to in database
 	On string `json:"on,omitempty" postgres:"table_name"`
-	//
+
+	// If Privilege is database specific - this field will be used to determine which db to use
+	// (used PrivilegeType from PrivilegeTypeDatabase or PrivilegeTypeTable)
 	Database string `json:"database,omitempty" postgres:"table_catalog"`
-}
-
-type PrivilegeType string
-
-func (p PrivilegeType) IsPrivilege() bool {
-	_, f := PrivilegeTypeMap[p]
-	return f
-}
-
-const (
-	SELECT        PrivilegeType = "SELECT"
-	INSERT        PrivilegeType = "INSERT"
-	UPDATE        PrivilegeType = "UPDATE"
-	DELETE        PrivilegeType = "DELETE"
-	TRUNCATE      PrivilegeType = "TRUNCATE"
-	REFERENCES    PrivilegeType = "REFERENCES"
-	TRIGGER       PrivilegeType = "TRIGGER"
-	CREATE        PrivilegeType = "CREATE"
-	CONNECT       PrivilegeType = "CONNECT"
-	TEMPORARY     PrivilegeType = "TEMPORARY"
-	EXECUTE       PrivilegeType = "EXECUTE"
-	USAGE         PrivilegeType = "USAGE"
-	SET           PrivilegeType = "SET"
-	ALTERSYSTEM   PrivilegeType = "ALTERSYSTEM"
-	ALLPRIVILEGES PrivilegeType = "ALL PRIVILEGES"
-)
-
-var PrivilegeTypeMap map[PrivilegeType]struct{} = map[PrivilegeType]struct{}{
-	SELECT:        {},
-	INSERT:        {},
-	UPDATE:        {},
-	DELETE:        {},
-	TRUNCATE:      {},
-	REFERENCES:    {},
-	TRIGGER:       {},
-	CREATE:        {},
-	CONNECT:       {},
-	TEMPORARY:     {},
-	EXECUTE:       {},
-	USAGE:         {},
-	SET:           {},
-	ALTERSYSTEM:   {},
-	ALLPRIVILEGES: {},
 }
 
 // UserStatus defines the observed state of User
 type UserStatus struct {
+	// TODO
 }
 
 //+kubebuilder:object:root=true
@@ -118,4 +85,22 @@ type UserList struct {
 
 func init() {
 	SchemeBuilder.Register(&User{}, &UserList{})
+}
+
+func (r *User) SetDbConfigs(dbConfigs []DatabaseConfig) *User {
+	newUser := r.DeepCopy()
+	newUser.Spec.DatabaseConfigs = dbConfigs
+	return newUser
+}
+
+func (r *User) SetPasswordSecret(name, namespace string) *User {
+	newUser := r.DeepCopy()
+	newUser.Spec.PasswordSecret = Secret{Name: name, Namespace: namespace}
+	return newUser
+}
+
+func (r *User) SetPrivileges(privileges []Privilege) *User {
+	newUser := r.DeepCopy()
+	newUser.Spec.Privileges = privileges
+	return newUser
 }
