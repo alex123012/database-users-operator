@@ -226,7 +226,7 @@ spec:
     # like `GRANT postgres TO john`
     - privilege: postgres
   # List of database configs to use (refer to above yaml manifest)
-  databaseConfig:
+  databaseConfigs:
     - name: postgres
       namespace: test-database-users-operator
 ```
