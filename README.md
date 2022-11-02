@@ -56,8 +56,12 @@ customresourcedefinition.apiextensions.k8s.io/users.auth.alex123012.com created
 serviceaccount/database-users-operator-controller-manager created
 clusterrole.rbac.authorization.k8s.io/database-users-operator-manager-role created
 clusterrolebinding.rbac.authorization.k8s.io/database-users-operator-manager-rolebinding created
-configmap/database-users-operator-manager-config created
+service/database-users-operator-webhook-service created
 deployment.apps/database-users-operator-controller-manager created
+certificate.cert-manager.io/database-users-operator-serving-cert created
+issuer.cert-manager.io/database-users-operator-selfsigned-issuer created
+mutatingwebhookconfiguration.admissionregistration.k8s.io/database-users-operator-mutating-webhook-configuration created
+validatingwebhookconfiguration.admissionregistration.k8s.io/database-users-operator-validating-webhook-configuration created
 ```
 
 Check `database-users-operator-system` is running:
