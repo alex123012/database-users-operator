@@ -435,7 +435,7 @@ limitations under the License.
 # Bash command for retrieving SSL certificates for user from default CockroachDB installation with operator
 user=john
 secret_name=john
-for key in $(kubectl get secrets ${secret_name} -oyaml | yq '.data | keys | .[]'); do kubectl get secrets ${secret_name} -oyaml | key=$key yq '.data[strenv(key)]' | base64 -d | tee tmp/$(if [[ $key == "tls.key" ]]; then echo "client.${user}.key"; elif [[ $key == "tls.crt" ]]; then echo "client.${user}.crt"; else echo "ca.crt"; fi); done
+for key in $(kubectl get secrets ${secret_name} -oyaml | yq '.data | keys | .[]'); do kubectl get secrets ${secret_name} -oyaml | key=$key yq '.data[strenv(key)]' | base64 -d | tee cockroachdb-certs/$(if [[ $key == "tls.key" ]]; then echo "client.${user}.key"; elif [[ $key == "tls.crt" ]]; then echo "client.${user}.crt"; else echo "ca.crt"; fi); done
 ```
 
 # TODO
