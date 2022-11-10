@@ -7,7 +7,7 @@ require (
 	github.com/jackc/pgx/v5 v5.0.4
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/onsi/ginkgo/v2 v2.5.0
-	github.com/onsi/gomega v1.24.0
+	github.com/onsi/gomega v1.24.1
 	golang.org/x/exp v0.0.0-20221019170559-20944726eadf
 	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4
 	k8s.io/api v0.25.0
@@ -66,10 +66,10 @@ require (
 	go.uber.org/multierr v1.6.0 // indirect
 	go.uber.org/zap v1.21.0 // indirect
 	golang.org/x/crypto v0.0.0-20220829220503-c86fa9a7ed90 // indirect
-	golang.org/x/net v0.1.0 // indirect
+	golang.org/x/net v0.2.0 // indirect
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8 // indirect
-	golang.org/x/sys v0.1.0 // indirect
-	golang.org/x/term v0.1.0 // indirect
+	golang.org/x/sys v0.2.0 // indirect
+	golang.org/x/term v0.2.0 // indirect
 	golang.org/x/text v0.4.0 // indirect
 	golang.org/x/time v0.0.0-20220609170525-579cf78fd858 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.2.0 // indirect
