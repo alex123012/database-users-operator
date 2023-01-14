@@ -383,7 +383,7 @@ spec:
       containers:
       - command:
         - /manager
-        image: ghcr.io/alex123012/database-users-operator:v0.0.4
+        image: ghcr.io/alex123012/database-users-operator:v0.0.5
         livenessProbe:
           httpGet:
             path: /healthz
