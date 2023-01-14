@@ -440,7 +440,7 @@ for key in $(kubectl get secrets ${secret_name} -oyaml | yq '.data | keys | .[]'
 
 # TODO
 - [x] Auto remove user from all dbs listed in databaseConfig when User CR deleted
-- [ ] Add webhook validation for config and user CR
+- [x] Add webhook validation for config and user CR
 - [ ] Fix CockroachDB database privileges
 - [ ] Create events for user CR
 - [ ] Create status updates for user CR

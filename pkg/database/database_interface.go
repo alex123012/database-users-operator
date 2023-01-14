@@ -107,20 +107,18 @@ func (d *DBconnector) ExecTx(ctx context.Context, queryList []Query, namedQuery 
 	if err != nil {
 		return err
 	}
-	defer func() {
-		if err := tx.Rollback(); err != nil {
-			d.logger.Error(err, "Rollback tx error")
-		}
-	}()
+
 	for _, q := range queryList {
 		args := d.infoLog(q.Query, q.Args)
 		if err := exec(ctx, tx, q.Query, args...); err != nil {
+			d.rollback(tx)
 			return err
 		}
 	}
 	for _, namedQuery := range namedQuery {
 		d.infoLog(namedQuery.Query, disableArg)
 		if err := namedExec(ctx, tx, namedQuery.Query, namedQuery.Arg); err != nil {
+			d.rollback(tx)
 			return err
 		}
 	}
@@ -130,6 +128,12 @@ func (d *DBconnector) ExecTx(ctx context.Context, queryList []Query, namedQuery 
 
 func (d *DBconnector) MapperFunc(tagName string, f func(string) string) {
 	d.db.Mapper = reflectx.NewMapperFunc(tagName, f)
+}
+
+func (d *DBconnector) rollback(tx *sqlx.Tx) {
+	if err := tx.Rollback(); err != nil {
+		d.logger.Error(err, "Rollback tx error")
+	}
 }
 
 func selectx(ctx context.Context, q sqlx.QueryerContext, dest any, quer string, args ...any) error {
