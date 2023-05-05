@@ -9,7 +9,7 @@ require (
 	github.com/onsi/ginkgo/v2 v2.9.4
 	github.com/onsi/gomega v1.27.6
 	golang.org/x/exp v0.0.0-20221019170559-20944726eadf
-	golang.org/x/sync v0.1.0
+	golang.org/x/sync v0.2.0
 	k8s.io/api v0.26.1
 	k8s.io/apimachinery v0.27.1
 	k8s.io/client-go v0.26.1
