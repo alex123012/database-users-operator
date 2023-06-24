@@ -1,0 +1,87 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.11.1
+  creationTimestamp: null
+  name: databasebindings.databaseusersoperator.com
+spec:
+  group: databaseusersoperator.com
+  names:
+    kind: DatabaseBinding
+    listKind: DatabaseBindingList
+    plural: databasebindings
+    singular: databasebinding
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: DatabaseBinding is the Schema for the databasebindings API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: DatabaseBindingSpec defines the desired state of DatabaseBinding
+            properties:
+              databaseConfig:
+                description: DatabaseConfig references to the DatabaseConfig that
+                  will be used to connect to DB
+                properties:
+                  name:
+                    description: resource name
+                    type: string
+                  namespace:
+                    description: resource namespace
+                    type: string
+                required:
+                - name
+                - namespace
+                type: object
+              user:
+                description: Users holds references to the objects the privileges
+                  applies to.
+                properties:
+                  name:
+                    description: resource name
+                    type: string
+                  namespace:
+                    description: resource namespace
+                    type: string
+                required:
+                - name
+                - namespace
+                type: object
+            required:
+            - databaseConfig
+            - user
+            type: object
+          status:
+            description: DatabaseBindingStatus defines the observed state of DatabaseBinding
+            properties:
+              summary:
+                properties:
+                  message:
+                    type: string
+                  ready:
+                    type: boolean
+                required:
+                - ready
+                type: object
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

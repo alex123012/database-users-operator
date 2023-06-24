@@ -3,22 +3,22 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.9.2
+    controller-gen.kubebuilder.io/version: v0.11.1
   creationTimestamp: null
-  name: configs.auth.alex123012.com
+  name: databases.databaseusersoperator.com
 spec:
-  group: auth.alex123012.com
+  group: databaseusersoperator.com
   names:
-    kind: Config
-    listKind: ConfigList
-    plural: configs
-    singular: config
-  scope: Namespaced
+    kind: Database
+    listKind: DatabaseList
+    plural: databases
+    singular: database
+  scope: Cluster
   versions:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: Config is the Schema for the configs API
+        description: Database is the Schema for the databases API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -33,7 +33,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: ConfigSpec defines the desired state of Config
+            description: DatabaseSpec defines the desired state of Database
             properties:
               databaseType:
                 description: Type of database to connect, required
@@ -57,15 +57,25 @@ spec:
                       required. If SSL Mode equals to "require", "verify-ca" or "verify-full"
                       - not required.
                     properties:
-                      name:
-                        description: Kubernetes secret name, required
+                      key:
+                        description: Kubernetes secret key with data
                         type: string
-                      namespace:
-                        description: Kubernetes secret namespace, required
-                        type: string
+                      secret:
+                        description: Secret is secret name and namespace
+                        properties:
+                          name:
+                            description: resource name
+                            type: string
+                          namespace:
+                            description: resource namespace
+                            type: string
+                        required:
+                        - name
+                        - namespace
+                        type: object
                     required:
-                    - name
-                    - namespace
+                    - key
+                    - secret
                     type: object
                   port:
                     description: k8s-service/database port to connect to execute queries,
@@ -80,42 +90,30 @@ spec:
                       and user key) for User CR with same name as User CR. see https://www.postgresql.org/docs/current/libpq-ssl.html'
                     type: string
                   sslSecrets:
-                    description: SSL CA certificate, user certificate and user key
-                      K8S secrets. If SSL Mode equals to "disable", "allow" or "prefer"
+                    description: Secret with SSL CA certificate, user certificate
+                      and user key. If SSL Mode equals to "disable", "allow" or "prefer"
                       field is not required. If SSL Mode equals to "require", "verify-ca"
                       or "verify-full" - required.
                     properties:
-                      caSecret:
-                        description: for user certificate - secrets data key must
-                          be "tls.crt" for user key - secrets data key must be "tls.key"
+                      key:
+                        description: Kubernetes secret key with data
+                        type: string
+                      secret:
+                        description: Secret is secret name and namespace
                         properties:
                           name:
-                            description: Kubernetes secret name, required
+                            description: resource name
                             type: string
                           namespace:
-                            description: Kubernetes secret namespace, required
-                            type: string
-                        required:
-                        - name
-                        - namespace
-                        type: object
-                      userSecret:
-                        description: for CA certificate - secrets data key must be
-                          "ca.crt"
-                        properties:
-                          name:
-                            description: Kubernetes secret name, required
-                            type: string
-                          namespace:
-                            description: Kubernetes secret namespace, required
+                            description: resource namespace
                             type: string
                         required:
                         - name
                         - namespace
                         type: object
                     required:
-                    - caSecret
-                    - userSecret
+                    - key
+                    - secret
                     type: object
                   user:
                     description: User that will be used to connect to database, defaults
@@ -135,11 +133,6 @@ spec:
             required:
             - databaseType
             type: object
-          status:
-            description: ConfigStatus defines the observed state of Config
-            type: object
         type: object
     served: true
     storage: true
-    subresources:
-      status: {}

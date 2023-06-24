@@ -1,0 +1,12 @@
+apiVersion: databaseusersoperator.com/v1alpha1
+kind: User
+metadata:
+  labels:
+    app.kubernetes.io/name: user
+    app.kubernetes.io/instance: user-sample
+    app.kubernetes.io/part-of: db-users-operator
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: db-users-operator
+  name: user-sample
+spec:
+  # TODO(user): Add fields here

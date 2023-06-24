@@ -1,0 +1,12 @@
+apiVersion: databaseusersoperator.com/v1alpha1
+kind: Privileges
+metadata:
+  labels:
+    app.kubernetes.io/name: privileges
+    app.kubernetes.io/instance: privileges-sample
+    app.kubernetes.io/part-of: db-users-operator
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: db-users-operator
+  name: privileges-sample
+spec:
+  # TODO(user): Add fields here

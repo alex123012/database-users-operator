@@ -1,5 +1,5 @@
 /*
-Copyright 2022.
+Copyright 2023.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,14 +17,13 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"github.com/alex123012/database-users-operator/pkg/database"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// ConfigSpec defines the desired state of Config
-type ConfigSpec struct {
+// DatabaseSpec defines the desired state of Database
+type DatabaseSpec struct {
 	// Type of database to connect, required
-	DatabaseType DatabaseType `json:"databaseType"`
+	Type DatabaseType `json:"databaseType"`
 
 	// Config for connecting for PostgreSQL compatible databases, not required.
 	// required if DatabaseType equals to "PostgreSQL"
@@ -38,7 +37,18 @@ const (
 	PostgreSQL DatabaseType = "PostgreSQL"
 )
 
-// Config that will be used by operator to connect to PostgreSQL compatible databases
+type PostgresSSLMode string
+
+const (
+	SSLModeDISABLE    PostgresSSLMode = "disable"
+	SSLModeALLOW      PostgresSSLMode = "allow"
+	SSLModePREFER     PostgresSSLMode = "prefer"
+	SSLModeREQUIRE    PostgresSSLMode = "require"
+	SSLModeVERIFYCA   PostgresSSLMode = "verify-ca"
+	SSLModeVERIFYFULL PostgresSSLMode = "verify-full"
+)
+
+// PostgreSQLConfig is config that will be used by operator to connect to PostgreSQL compatible databases
 type PostgreSQLConfig struct {
 
 	// Full DNS name/ip for database to use, required.
@@ -63,16 +73,16 @@ type PostgreSQLConfig struct {
 	// If SSL mode is "require", "verify-ca", "verify-full" - operator will generate K8S secret with
 	// SSL bundle (CA certificate, user certificate and user key) for User CR with same name as User CR.
 	// see https://www.postgresql.org/docs/current/libpq-ssl.html
-	SSLMode database.PostgresSSLMode `json:"sslMode"`
+	SSLMode PostgresSSLMode `json:"sslMode"`
 
 	// Database name that will be used to connect to database, not required
 	// refer to --dbname flag in https://www.postgresql.org/docs/current/app-psql.html
 	DatabaseName string `json:"databaseName,omitempty"`
 
-	// SSL CA certificate, user certificate and user key K8S secrets.
+	// Secret with SSL CA certificate, user certificate and user key.
 	// If SSL Mode equals to "disable", "allow" or "prefer" field is not required.
 	// If SSL Mode equals to "require", "verify-ca" or "verify-full" - required.
-	SSLCredentials SSLSecrets `json:"sslSecrets,omitempty"`
+	SSLCredentialsSecret Secret `json:"sslSecrets,omitempty"`
 
 	// Secret with password for User to connect to database
 	// If SSL Mode equals to "disable", "allow" or "prefer" field is required.
@@ -80,53 +90,26 @@ type PostgreSQLConfig struct {
 	PasswordSecret Secret `json:"passwordSecret,omitempty"`
 }
 
-// SSLSecrets is credentials for connecting to DB with SSL certificates
-type SSLSecrets struct {
-	// for CA certificate - secrets data key must be "ca.crt"
-	UserSecret Secret `json:"userSecret"`
-
-	// for user certificate - secrets data key must be "tls.crt"
-	// for user key - secrets data key must be "tls.key"
-	CASecret Secret `json:"caSecret"`
-}
-
-// Utility struct for kubernetes secret specification
-type Secret struct {
-	// Kubernetes secret name, required
-	Name string `json:"name"`
-
-	// Kubernetes secret namespace, required
-	Namespace string `json:"namespace"`
-}
-
-// ConfigStatus defines the observed state of Config
-type ConfigStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-	// TODO
-}
-
 //+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
+//+kubebuilder:resource:scope=Cluster
 
-// Config is the Schema for the configs API
-type Config struct {
+// Database is the Schema for the databases API
+type Database struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   ConfigSpec   `json:"spec,omitempty"`
-	Status ConfigStatus `json:"status,omitempty"`
+	Spec DatabaseSpec `json:"spec,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 
-// ConfigList contains a list of Config
-type ConfigList struct {
+// DatabaseList contains a list of Database
+type DatabaseList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []Config `json:"items"`
+	Items           []Database `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&Config{}, &ConfigList{})
+	SchemeBuilder.Register(&Database{}, &DatabaseList{})
 }

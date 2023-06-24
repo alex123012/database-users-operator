@@ -2,10 +2,17 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: user-editor-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: db-users-operator
+    app.kubernetes.io/part-of: db-users-operator
+    app.kubernetes.io/managed-by: kustomize
   name: user-editor-role
 rules:
 - apiGroups:
-  - auth.alex123012.com
+  - databaseusersoperator.com
   resources:
   - users
   verbs:
@@ -17,7 +24,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - auth.alex123012.com
+  - databaseusersoperator.com
   resources:
   - users/status
   verbs:
