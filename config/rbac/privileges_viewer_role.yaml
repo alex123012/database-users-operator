@@ -1,0 +1,27 @@
+# permissions for end users to view privileges.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: privileges-viewer-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: db-users-operator
+    app.kubernetes.io/part-of: db-users-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: privileges-viewer-role
+rules:
+- apiGroups:
+  - databaseusersoperator.com
+  resources:
+  - privileges
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - databaseusersoperator.com
+  resources:
+  - privileges/status
+  verbs:
+  - get

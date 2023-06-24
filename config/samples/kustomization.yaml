@@ -1,5 +1,8 @@
 ## Append samples you want in your CSV to this file as resources ##
 resources:
-  - auth_v1alpha1_user.yaml
-  - auth_v1alpha1_config.yaml
+- _v1alpha1_database.yaml
+- _v1alpha1_privileges.yaml
+- _v1alpha1_user.yaml
+- _v1alpha1_privilegesbinding.yaml
+- _v1alpha1_databasebinding.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples
