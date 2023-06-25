@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/alex123012/database-users-operator/api/v1alpha1"
+	"github.com/alex123012/database-users-operator/controllers/database/connection"
 	"github.com/alex123012/database-users-operator/controllers/database/postgresql"
 	"github.com/alex123012/database-users-operator/controllers/internal"
 	"github.com/go-logr/logr"
@@ -20,15 +21,23 @@ type Interface interface {
 	RevokePrivileges(ctx context.Context, username string, privileges []v1alpha1.PrivilegeSpec) error
 }
 
+type dbConnection interface {
+	Close(ctx context.Context) error
+	Copy() interface{}
+	Connect(ctx context.Context, driver string, connString string) error
+	Exec(ctx context.Context, disableLog connection.LogInfo, query string, args ...interface{}) error
+}
+
 func NewDatabase(ctx context.Context, s v1alpha1.DatabaseSpec, kClient client.Client, logger logr.Logger) (Interface, error) {
+	conn := connection.NewDefaultConnector(logger)
 	switch s.Type {
 	case v1alpha1.PostgreSQL:
-		return newPostgresql(ctx, s.PostgreSQL, kClient, logger)
+		return newPostgresql(ctx, conn, s.PostgreSQL, kClient, logger)
 	}
 	return nil, fmt.Errorf("can't find supported DB type '%s'", s.Type)
 }
 
-func newPostgresql(ctx context.Context, c v1alpha1.PostgreSQLConfig, kClient client.Client, logger logr.Logger) (*postgresql.Postgresql, error) {
+func newPostgresql(ctx context.Context, conn dbConnection, c v1alpha1.PostgreSQLConfig, kClient client.Client, logger logr.Logger) (*postgresql.Postgresql, error) {
 	sslData := make(map[string]string, 0)
 	var sslCAKey string
 	if c.SSLMode == v1alpha1.SSLModeREQUIRE || c.SSLMode == v1alpha1.SSLModeVERIFYCA || c.SSLMode == v1alpha1.SSLModeVERIFYFULL {
@@ -56,5 +65,5 @@ func newPostgresql(ctx context.Context, c v1alpha1.PostgreSQLConfig, kClient cli
 	cfg := postgresql.NewConfig(c.Host, c.Port, c.User, password, c.DatabaseName,
 		string(c.SSLMode), sslData["ca.crt"], sslData["tls.crt"], sslData["tls.key"], sslCAKey)
 
-	return postgresql.NewPostgresql(cfg, logger), nil
+	return postgresql.NewPostgresql(conn, cfg, logger), nil
 }

@@ -7,26 +7,35 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"errors"
 	"math/big"
 	"math/rand"
 	"strings"
 	"time"
 
 	"github.com/alex123012/database-users-operator/api/v1alpha1"
+	"github.com/alex123012/database-users-operator/controllers/database/connection"
 	"github.com/go-logr/logr"
-	"github.com/jackc/pgx/v5"
 )
 
+type dbConnection interface {
+	Copy() interface{}
+	Close(ctx context.Context) error
+	Connect(ctx context.Context, driver string, connString string) error
+	Exec(ctx context.Context, disableLog connection.LogInfo, query string, args ...interface{}) error
+}
+
 type Postgresql struct {
-	db         *pgx.Conn
+	db         dbConnection
 	config     *Config
 	logger     logr.Logger
 	cfgSigChan chan struct{}
 }
 
-func NewPostgresql(config *Config, logger logr.Logger) *Postgresql {
+func NewPostgresql(c dbConnection, config *Config, logger logr.Logger) *Postgresql {
 	return &Postgresql{
 		config: config,
+		db:     c,
 		logger: logger,
 	}
 }
@@ -38,13 +47,7 @@ func (p *Postgresql) Connect(ctx context.Context) error {
 		return err
 	}
 
-	conn, err := pgx.Connect(ctx, connString)
-	if err != nil {
-		return err
-	}
-
-	p.db = conn
-	return nil
+	return p.db.Connect(ctx, "pgx", connString)
 }
 
 func (p *Postgresql) Close(ctx context.Context) error {
@@ -54,9 +57,8 @@ func (p *Postgresql) Close(ctx context.Context) error {
 
 func (p *Postgresql) CreateUser(ctx context.Context, username, password string) (map[string]string, error) {
 	//TODO (alex123012): use gorm.Statement, refer to https://gorm.io/docs/sql_builder.html#Clauses
-	query := createUserQuery(username, password)
-
-	_, err := p.db.Exec(ctx, query)
+	query, logInfo := createUserQuery(username, password)
+	err := p.db.Exec(ctx, logInfo, query)
 
 	var sslCertificates map[string]string
 	if p.config.createCertificates && !isAlreadyExists(err) {
@@ -70,14 +72,105 @@ func (p *Postgresql) CreateUser(ctx context.Context, username, password string) 
 	return sslCertificates, ignoreAlreadyExists(err)
 }
 
-func createUserQuery(username, password string) string {
+func createUserQuery(username, password string) (string, connection.LogInfo) {
+	logInfo := connection.EnableLogger
 	stmtBuilder := &strings.Builder{}
 	stmtBuilder.WriteString("CREATE USER ")
 	stmtBuilder.WriteString(escapeLiteral(username))
 	if password != "" {
 		stmtBuilder.WriteString(" WITH PASSWORD ")
 		stmtBuilder.WriteString(escapeString(password))
+		logInfo = connection.DisableLogger
 	}
+	return stmtBuilder.String(), logInfo
+}
+
+func (p *Postgresql) DeleteUser(ctx context.Context, username string) error {
+	//TODO (alex123012): use gorm.Statement, refer to https://gorm.io/docs/sql_builder.html#Clauses
+	query := deleteUserQuery(username)
+	return p.db.Exec(ctx, connection.EnableLogger, query)
+}
+
+func deleteUserQuery(username string) string {
+	stmtBuilder := &strings.Builder{}
+	stmtBuilder.WriteString("DROP USER ")
+	stmtBuilder.WriteString(escapeLiteral(username))
+	return stmtBuilder.String()
+}
+
+func (p *Postgresql) ApplyPrivileges(ctx context.Context, username string, privileges []v1alpha1.PrivilegeSpec) error {
+	return p.privilegesProcessor(ctx, username, privileges, "GRANT", "TO")
+}
+
+func (p *Postgresql) RevokePrivileges(ctx context.Context, username string, privileges []v1alpha1.PrivilegeSpec) error {
+	return p.privilegesProcessor(ctx, username, privileges, "REVOKE", "FROM")
+}
+
+func (p *Postgresql) privilegesProcessor(ctx context.Context, username string, privileges []v1alpha1.PrivilegeSpec, statement, arg string) error {
+	for _, privelege := range privileges {
+		var err error
+		switch {
+		case privelege.Database != "" && privelege.On != "" && privelege.Privilege != "":
+			err = p.inDatabasePrivilege(ctx, username, privelege.Database, privelege.On, privelege.Privilege, statement, arg)
+
+		case privelege.On != "" && privelege.Privilege != "":
+			err = p.databasePrivilege(ctx, username, privelege.Database, privelege.Privilege, statement, arg)
+
+		case privelege.Privilege != "":
+			err = p.privilege(ctx, username, privelege.Privilege, statement, arg)
+
+		default:
+			err = errors.New("can't use this type of privelege")
+		}
+
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (p *Postgresql) inDatabasePrivilege(ctx context.Context, username, dbname, on string, privelege v1alpha1.PrivilegeType, statement, arg string) error {
+	newconf := p.config.Copy()
+	newconf.DatabaseName = dbname
+	conn := p.db.Copy()
+	newP := NewPostgresql(conn.(dbConnection), newconf, p.logger)
+	if err := newP.Connect(ctx); err != nil {
+		return err
+	}
+	defer newP.Close(ctx)
+	query := prepareStatementForPrivilege(statement, arg, username, dbname, on, privelege)
+	return newP.db.Exec(ctx, connection.EnableLogger, query)
+}
+
+func (p *Postgresql) databasePrivilege(ctx context.Context, username, dbname string, privelege v1alpha1.PrivilegeType, statement, arg string) error {
+	query := prepareStatementForPrivilege(statement, arg, username, dbname, "", privelege)
+	return p.db.Exec(ctx, connection.EnableLogger, query)
+}
+
+func (p *Postgresql) privilege(ctx context.Context, username string, privelege v1alpha1.PrivilegeType, statement, arg string) error {
+	query := prepareStatementForPrivilege(statement, arg, username, "", "", privelege)
+	return p.db.Exec(ctx, connection.EnableLogger, query)
+}
+
+func prepareStatementForPrivilege(statement, arg, username, dbname, on string, privelege v1alpha1.PrivilegeType) string {
+	stmtBuilder := &strings.Builder{}
+	stmtBuilder.WriteString(statement)
+	stmtBuilder.WriteString(" ")
+	stmtBuilder.WriteString(escapeLiteralWithoutQuotes(string(privelege)))
+
+	if on != "" {
+		stmtBuilder.WriteString(" ON ")
+		stmtBuilder.WriteString(escapeLiteral(on))
+	} else if dbname != "" {
+		stmtBuilder.WriteString(" ON DATABASE ")
+		stmtBuilder.WriteString(escapeLiteral(dbname))
+	}
+
+	stmtBuilder.WriteString(" ")
+	stmtBuilder.WriteString(arg)
+	stmtBuilder.WriteString(" ")
+	stmtBuilder.WriteString(escapeLiteral(username))
 	return stmtBuilder.String()
 }
 
@@ -128,16 +221,4 @@ func (p *Postgresql) genPostgresCertFromCA(userName string) (map[string]string, 
 	})
 
 	return map[string]string{"tls.crt": string(certPEM), "tls.key": string(privKeyPEM), "ca.crt": p.config.SSLCACert}, nil
-}
-
-func (p *Postgresql) DeleteUser(ctx context.Context, username string) error {
-	return nil
-}
-
-func (p *Postgresql) ApplyPrivileges(ctx context.Context, username string, privileges []v1alpha1.PrivilegeSpec) error {
-	return nil
-}
-
-func (p *Postgresql) RevokePrivileges(ctx context.Context, username string, privileges []v1alpha1.PrivilegeSpec) error {
-	return nil
 }

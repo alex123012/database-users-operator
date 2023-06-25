@@ -56,9 +56,9 @@ func (c *Config) ConnString(deleteFilesSigChan <-chan struct{}) (string, error) 
 	}
 
 	var (
-		sslCACertFile   = fmt.Sprintf("postgres-certs/%s/%s.ca", c.Host, c.User)
-		sslUserCertFile = fmt.Sprintf("postgres-certs/%s/%s.crt", c.Host, c.User)
-		sslUserKeyFile  = fmt.Sprintf("postgres-certs/%s/%s.key", c.Host, c.User)
+		sslCACertFile   = fmt.Sprintf("postgres-certs/%s/%s_%s.ca", c.Host, c.DatabaseName, c.User)
+		sslUserCertFile = fmt.Sprintf("postgres-certs/%s/%s_%s.crt", c.Host, c.DatabaseName, c.User)
+		sslUserKeyFile  = fmt.Sprintf("postgres-certs/%s/%s_%s.key", c.Host, c.DatabaseName, c.User)
 	)
 
 	if c.SSLCACert != "" {

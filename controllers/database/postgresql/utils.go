@@ -24,6 +24,18 @@ func escapeString(str string) string {
 	return "'" + strings.ReplaceAll(str, "'", "''") + "'"
 }
 
+func escapeLiteralWithoutQuotes(str string) string {
+	ident := strings.Split(str, ".")
+	parts := make([]string, len(ident))
+	for i := range ident {
+		tmp := strings.ReplaceAll(ident[i], string([]byte{0}), "")
+		tmp = strings.ReplaceAll(tmp, `"`, `""`)
+		parts[i] = strings.ReplaceAll(tmp, `#`, ``)
+		parts[i] = strings.ReplaceAll(tmp, `;`, ``)
+	}
+	return strings.Join(parts, ".")
+}
+
 func ignoreAlreadyExists(err error) error {
 	if isAlreadyExists(err) {
 		return nil
