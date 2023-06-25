@@ -79,10 +79,15 @@ type PostgreSQLConfig struct {
 	// refer to --dbname flag in https://www.postgresql.org/docs/current/app-psql.html
 	DatabaseName string `json:"databaseName,omitempty"`
 
-	// Secret with SSL CA certificate, user certificate and user key.
+	// Secret with SSL CA certificate ("ca.crt" key), user certificate ("tls.crt" key) and user key ("tls.key" key).
 	// If SSL Mode equals to "disable", "allow" or "prefer" field is not required.
 	// If SSL Mode equals to "require", "verify-ca" or "verify-full" - required.
-	SSLCredentialsSecret Secret `json:"sslSecrets,omitempty"`
+	SSLCredentialsSecret NamespacedName `json:"sslSecrets,omitempty"`
+
+	// Secret with CA key for creating users certificates
+	// If SSL Mode equals to "disable", "allow" or "prefer" field is not required.
+	// If SSL Mode equals to "require", "verify-ca" or "verify-full" - required.
+	SSLCAKey Secret `json:"sslCAKey,omitempty"`
 
 	// Secret with password for User to connect to database
 	// If SSL Mode equals to "disable", "allow" or "prefer" field is required.

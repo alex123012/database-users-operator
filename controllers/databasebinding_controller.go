@@ -18,7 +18,6 @@ package controllers
 
 import (
 	"context"
-	"encoding/base64"
 	"strings"
 
 	v1 "k8s.io/api/core/v1"
@@ -35,6 +34,7 @@ import (
 
 	"github.com/alex123012/database-users-operator/api/v1alpha1"
 	"github.com/alex123012/database-users-operator/controllers/database"
+	"github.com/alex123012/database-users-operator/controllers/internal"
 	"github.com/go-logr/logr"
 )
 
@@ -137,11 +137,11 @@ func (r *DatabaseBindingReconciler) database(ctx context.Context, nn v1alpha1.Na
 }
 
 func (r *DatabaseBindingReconciler) createUserInDatabase(ctx context.Context, dbBinding *v1alpha1.DatabaseBinding, user *v1alpha1.User, dbConfig *v1alpha1.Database, logger logr.Logger) error {
-	db, err := database.NewDatabase(dbConfig.Spec)
+	db, err := database.NewDatabase(ctx, dbConfig.Spec, r.Client, logger)
 	if err != nil {
 		return err
 	}
-	defer db.Close()
+	defer db.Close(ctx)
 
 	password, err := r.userPassword(ctx, user)
 	if err != nil {
@@ -163,11 +163,11 @@ func (r *DatabaseBindingReconciler) createUserInDatabase(ctx context.Context, db
 }
 
 func (r *DatabaseBindingReconciler) deleteUserInDatabase(ctx context.Context, dbBinding *v1alpha1.DatabaseBinding, user *v1alpha1.User, dbConfig *v1alpha1.Database, logger logr.Logger) error {
-	db, err := database.NewDatabase(dbConfig.Spec)
+	db, err := database.NewDatabase(ctx, dbConfig.Spec, r.Client, logger)
 	if err != nil {
 		return err
 	}
-	defer db.Close()
+	defer db.Close(ctx)
 
 	return db.DeleteUser(ctx, user.Name)
 }
@@ -178,14 +178,14 @@ func (r *DatabaseBindingReconciler) userPassword(ctx context.Context, user *v1al
 		return "", nil
 	}
 
-	secret := &v1.Secret{}
-	if err := r.Get(ctx, types.NamespacedName(secretCfg.Secret), secret); err != nil {
+	data, err := internal.DecodeSecretData(ctx, types.NamespacedName(secretCfg.Secret), r.Client)
+	if err != nil {
 		return "", err
 	}
 
-	grSecret := schema.ParseGroupKind("v1.Secret")
-	passwordB64, ok := secret.Data[secretCfg.Key]
+	password, ok := data[secretCfg.Key]
 	if !ok {
+		grSecret := schema.ParseGroupKind("v1.Secret")
 		return "", errors.NewInvalid(
 			grSecret, secretCfg.Secret.Name,
 			field.ErrorList{
@@ -193,9 +193,7 @@ func (r *DatabaseBindingReconciler) userPassword(ctx context.Context, user *v1al
 			},
 		)
 	}
-
-	pass, err := base64.StdEncoding.DecodeString(string(passwordB64))
-	return string(pass), err
+	return string(password), nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
