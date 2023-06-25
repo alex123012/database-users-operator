@@ -210,6 +210,7 @@ func (in *NamespacedName) DeepCopy() *NamespacedName {
 func (in *PostgreSQLConfig) DeepCopyInto(out *PostgreSQLConfig) {
 	*out = *in
 	out.SSLCredentialsSecret = in.SSLCredentialsSecret
+	out.SSLCAKey = in.SSLCAKey
 	out.PasswordSecret = in.PasswordSecret
 }
 

@@ -83,7 +83,7 @@ func (r *PrivilegesBindingReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		}
 
 		for _, dbBinding := range dbBindings {
-			if err := revokePrivileges(ctx, privBinding, dbBinding, privileges.Privileges, logger); err != nil {
+			if err := r.revokePrivileges(ctx, privBinding, dbBinding, privileges.Privileges, logger); err != nil {
 				return ctrl.Result{}, err
 			}
 		}
@@ -104,7 +104,7 @@ func (r *PrivilegesBindingReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	}
 
 	for _, dbBinding := range dbBindings {
-		if err := applyPrivileges(ctx, privBinding, dbBinding, privileges.Privileges, logger); err != nil {
+		if err := r.applyPrivileges(ctx, privBinding, dbBinding, privileges.Privileges, logger); err != nil {
 			return ctrl.Result{}, err
 		}
 	}
@@ -161,22 +161,22 @@ func (r *PrivilegesBindingReconciler) databaseUsers(ctx context.Context, nns []v
 	return dbBindings, nil
 }
 
-func revokePrivileges(ctx context.Context, privBinding *v1alpha1.PrivilegesBinding, dbBinding databaseUserBinding, privileges []v1alpha1.PrivilegeSpec, logger logr.Logger) error {
-	db, err := database.NewDatabase(dbBinding.dbConfig.Spec)
+func (r *PrivilegesBindingReconciler) revokePrivileges(ctx context.Context, privBinding *v1alpha1.PrivilegesBinding, dbBinding databaseUserBinding, privileges []v1alpha1.PrivilegeSpec, logger logr.Logger) error {
+	db, err := database.NewDatabase(ctx, dbBinding.dbConfig.Spec, r.Client, logger)
 	if err != nil {
 		return err
 	}
-	defer db.Close()
+	defer db.Close(ctx)
 
 	return db.RevokePrivileges(ctx, dbBinding.user.Name, privileges)
 }
 
-func applyPrivileges(ctx context.Context, privBinding *v1alpha1.PrivilegesBinding, dbBinding databaseUserBinding, privileges []v1alpha1.PrivilegeSpec, logger logr.Logger) error {
-	db, err := database.NewDatabase(dbBinding.dbConfig.Spec)
+func (r *PrivilegesBindingReconciler) applyPrivileges(ctx context.Context, privBinding *v1alpha1.PrivilegesBinding, dbBinding databaseUserBinding, privileges []v1alpha1.PrivilegeSpec, logger logr.Logger) error {
+	db, err := database.NewDatabase(ctx, dbBinding.dbConfig.Spec, r.Client, logger)
 	if err != nil {
 		return err
 	}
-	defer db.Close()
+	defer db.Close(ctx)
 
 	return db.ApplyPrivileges(ctx, dbBinding.user.Name, privileges)
 }
