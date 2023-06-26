@@ -6,8 +6,8 @@ metadata:
     app.kubernetes.io/name: clusterrole
     app.kubernetes.io/instance: privilegesbinding-viewer-role
     app.kubernetes.io/component: rbac
-    app.kubernetes.io/created-by: db-users-operator
-    app.kubernetes.io/part-of: db-users-operator
+    app.kubernetes.io/created-by: database-users-operator
+    app.kubernetes.io/part-of: database-users-operator
     app.kubernetes.io/managed-by: kustomize
   name: privilegesbinding-viewer-role
 rules:
