@@ -18,7 +18,7 @@ spec:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: DatabaseBinding is the Schema for the databasebindings API
+        description: DatabaseBinding is the Schema for the databasebindings API.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -33,7 +33,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: DatabaseBindingSpec defines the desired state of DatabaseBinding
+            description: DatabaseBindingSpec defines the desired state of DatabaseBinding.
             properties:
               database:
                 description: Database references to the Database that will be used
@@ -68,7 +68,7 @@ spec:
             - user
             type: object
           status:
-            description: DatabaseBindingStatus defines the observed state of DatabaseBinding
+            description: DatabaseBindingStatus defines the observed state of DatabaseBinding.
             properties:
               summary:
                 properties:

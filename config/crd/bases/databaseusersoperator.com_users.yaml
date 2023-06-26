@@ -18,7 +18,7 @@ spec:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: User is the Schema for the users API
+        description: User is the Schema for the users API.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -33,7 +33,7 @@ spec:
           metadata:
             type: object
           passwordSecret:
-            description: Secret is a reference for kubernetes secret
+            description: Secret is a reference for kubernetes secret.
             properties:
               key:
                 description: Kubernetes secret key with data
