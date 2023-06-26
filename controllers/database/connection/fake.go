@@ -60,9 +60,10 @@ func (m *FakeConnection) Copy() Connection {
 func (m *FakeConnection) Exec(_ context.Context, _ LogInfo, query string, args ...interface{}) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
+	q := fmt.Sprint(append([]interface{}{query}, args...)...)
 	m.count++
-	m.queries[query] = m.count
-	m.list = append(m.list, fmt.Sprintf(query, args...))
+	m.queries[q] = m.count
+	m.list = append(m.list, q)
 	return nil
 }
 
