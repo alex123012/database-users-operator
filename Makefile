@@ -135,7 +135,7 @@ endif
 .PHONY: prepare-kind
 prepare-kind: git-commit-sha manifests ## Deploy operator to kind cluster
 	docker buildx build --load -t $(IMG_REPO):$(GIT_COMMIT) .
-	kind load docker-image $(IMG_REPO):$(GIT_COMMIT)
+	kind load docker-image --name=e2e-tests $(IMG_REPO):$(GIT_COMMIT)
 	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG_REPO):$(GIT_COMMIT)
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
