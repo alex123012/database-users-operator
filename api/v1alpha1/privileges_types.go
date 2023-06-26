@@ -22,7 +22,7 @@ import (
 
 type PrivilegeType string
 
-// PrivilegesSpec defines the desired state of Privileges
+// PrivilegesSpec defines the desired state of Privileges.
 type PrivilegeSpec struct {
 	// Privilege is role name or PrivilegeType
 	Privilege PrivilegeType `json:"privilege" postgres:"privilege_type"`
@@ -37,7 +37,7 @@ type PrivilegeSpec struct {
 
 //+kubebuilder:object:root=true
 
-// Privileges is the Schema for the privileges API
+// Privileges is the Schema for the privileges API.
 type Privileges struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -47,7 +47,7 @@ type Privileges struct {
 
 //+kubebuilder:object:root=true
 
-// PrivilegesList contains a list of Privileges
+// PrivilegesList contains a list of Privileges.
 type PrivilegesList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

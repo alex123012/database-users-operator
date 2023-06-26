@@ -20,7 +20,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// PrivilegesBindingSpec defines the desired state of PrivilegesBinding
+// PrivilegesBindingSpec defines the desired state of PrivilegesBinding.
 type PrivilegesBindingSpec struct {
 	// DatabaseBinding references to the DatabaseBinding that will be
 	// used to apply privileges to user in a particular database
@@ -32,7 +32,7 @@ type PrivilegesBindingSpec struct {
 	Privileges NamespacedName `json:"privileges"`
 }
 
-// PrivilegesBindingStatus defines the observed state of PrivilegesBinding
+// PrivilegesBindingStatus defines the observed state of PrivilegesBinding.
 type PrivilegesBindingStatus struct {
 	Summary StatusSummary `json:"summary,omitempty"`
 }
@@ -40,7 +40,7 @@ type PrivilegesBindingStatus struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 
-// PrivilegesBinding is the Schema for the privilegesbindings API
+// PrivilegesBinding is the Schema for the privilegesbindings API.
 type PrivilegesBinding struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -51,7 +51,7 @@ type PrivilegesBinding struct {
 
 //+kubebuilder:object:root=true
 
-// PrivilegesBindingList contains a list of PrivilegesBinding
+// PrivilegesBindingList contains a list of PrivilegesBinding.
 type PrivilegesBindingList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

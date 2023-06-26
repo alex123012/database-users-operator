@@ -20,7 +20,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// DatabaseBindingSpec defines the desired state of DatabaseBinding
+// DatabaseBindingSpec defines the desired state of DatabaseBinding.
 type DatabaseBindingSpec struct {
 	// Database references to the Database that will be used to connect to DB
 	Database NamespacedName `json:"database"`
@@ -29,7 +29,7 @@ type DatabaseBindingSpec struct {
 	User NamespacedName `json:"user"`
 }
 
-// DatabaseBindingStatus defines the observed state of DatabaseBinding
+// DatabaseBindingStatus defines the observed state of DatabaseBinding.
 type DatabaseBindingStatus struct {
 	Summary StatusSummary `json:"summary,omitempty"`
 }
@@ -37,7 +37,7 @@ type DatabaseBindingStatus struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 
-// DatabaseBinding is the Schema for the databasebindings API
+// DatabaseBinding is the Schema for the databasebindings API.
 type DatabaseBinding struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -48,7 +48,7 @@ type DatabaseBinding struct {
 
 //+kubebuilder:object:root=true
 
-// DatabaseBindingList contains a list of DatabaseBinding
+// DatabaseBindingList contains a list of DatabaseBinding.
 type DatabaseBindingList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

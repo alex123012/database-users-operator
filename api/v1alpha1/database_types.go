@@ -20,17 +20,17 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// DatabaseSpec defines the desired state of Database
+// DatabaseSpec defines the desired state of Database.
 type DatabaseSpec struct {
 	// Type of database to connect, required
 	Type DatabaseType `json:"databaseType"`
 
 	// Config for connecting for PostgreSQL compatible databases, not required.
 	// required if DatabaseType equals to "PostgreSQL"
-	PostgreSQL PostgreSQLConfig `json:"postgreSQL,omitempty"`
+	PostgreSQL PostgreSQLConfig `json:"postgreSql,omitempty"`
 }
 
-// Database types that are currently supported
+// Database types that are currently supported.
 type DatabaseType string
 
 const (
@@ -48,9 +48,8 @@ const (
 	SSLModeVERIFYFULL PostgresSSLMode = "verify-full"
 )
 
-// PostgreSQLConfig is config that will be used by operator to connect to PostgreSQL compatible databases
+// PostgreSQLConfig is config that will be used by operator to connect to PostgreSQL compatible databases.
 type PostgreSQLConfig struct {
-
 	// Full DNS name/ip for database to use, required.
 	// If K8S service is used to connect - provide host
 	// as <db-service-name>.<db-service-namespace>.svc.cluster.local
@@ -87,7 +86,7 @@ type PostgreSQLConfig struct {
 	// Secret with CA key for creating users certificates
 	// If SSL Mode equals to "disable", "allow" or "prefer" field is not required.
 	// If SSL Mode equals to "require", "verify-ca" or "verify-full" - required.
-	SSLCAKey Secret `json:"sslCAKey,omitempty"`
+	SSLCAKey Secret `json:"sslCaKey,omitempty"`
 
 	// Secret with password for User to connect to database
 	// If SSL Mode equals to "disable", "allow" or "prefer" field is required.
@@ -98,7 +97,7 @@ type PostgreSQLConfig struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:resource:scope=Cluster
 
-// Database is the Schema for the databases API
+// Database is the Schema for the databases API.
 type Database struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -108,7 +107,7 @@ type Database struct {
 
 //+kubebuilder:object:root=true
 
-// DatabaseList contains a list of Database
+// DatabaseList contains a list of Database.
 type DatabaseList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

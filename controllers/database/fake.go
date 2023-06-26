@@ -4,10 +4,11 @@ import (
 	"context"
 	"sync"
 
-	"github.com/alex123012/database-users-operator/api/v1alpha1"
-	"github.com/alex123012/database-users-operator/controllers/database/connection"
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/alex123012/database-users-operator/api/v1alpha1"
+	"github.com/alex123012/database-users-operator/controllers/database/connection"
 )
 
 type fakeConnection interface {
@@ -39,8 +40,8 @@ func NewFakeDatabase() *FakeDatabase {
 }
 
 func (f *FakeDatabase) DatabaseCreatorFunc() func(context.Context, v1alpha1.DatabaseSpec, client.Client, logr.Logger) (Interface, error) {
-	return func(ctx context.Context, s v1alpha1.DatabaseSpec, kClient client.Client, logger logr.Logger) (Interface, error) {
-		db, err := newDatabase(ctx, f.Conn, s, kClient, logger)
+	return func(ctx context.Context, s v1alpha1.DatabaseSpec, client client.Client, logger logr.Logger) (Interface, error) {
+		db, err := newDatabase(ctx, f.Conn, s, client, logger)
 		return db, err
 	}
 }

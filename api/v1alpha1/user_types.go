@@ -22,7 +22,7 @@ import (
 
 //+kubebuilder:object:root=true
 
-// User is the Schema for the users API
+// User is the Schema for the users API.
 type User struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -32,7 +32,7 @@ type User struct {
 
 //+kubebuilder:object:root=true
 
-// UserList contains a list of User
+// UserList contains a list of User.
 type UserList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

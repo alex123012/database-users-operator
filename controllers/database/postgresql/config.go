@@ -24,7 +24,6 @@ type Config struct {
 }
 
 func NewConfig(host string, port int, user, pass, dbname string, sslmode v1alpha1.PostgresSSLMode, sslCaCert, sslUserCert, sslUserKey, sslCAKey string) *Config {
-
 	return &Config{
 		Host:         host,
 		User:         user,
@@ -106,9 +105,8 @@ func (c *Config) CreateCerts() bool {
 
 func createCertFile(path string, data string) error {
 	dir := filepath.Dir(path)
-	err := os.MkdirAll(dir, 0755)
-	if err != nil {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
 	}
-	return os.WriteFile(path, []byte(data), 0600)
+	return os.WriteFile(path, []byte(data), 0o600)
 }

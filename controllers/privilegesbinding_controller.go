@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 
+	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -28,14 +29,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/alex123012/database-users-operator/api/v1alpha1"
-	"github.com/go-logr/logr"
 )
 
 const (
 	privBindingFinalizer = "privilegebinding.databaseusersoperator.com/finalizer"
 )
 
-// PrivilegesBindingReconciler reconciles a PrivilegesBinding object
+// PrivilegesBindingReconciler reconciles a PrivilegesBinding object.
 type PrivilegesBindingReconciler struct {
 	client.Client
 	Scheme          *runtime.Scheme
@@ -136,7 +136,7 @@ func (r *PrivilegesBindingReconciler) privilegesBinding(ctx context.Context, nn 
 	return privBinding, nil
 }
 
-func (r *PrivilegesBindingReconciler) privileges(ctx context.Context, nn v1alpha1.NamespacedName, logger logr.Logger) (*v1alpha1.Privileges, error) {
+func (r *PrivilegesBindingReconciler) privileges(ctx context.Context, nn v1alpha1.NamespacedName, _ logr.Logger) (*v1alpha1.Privileges, error) {
 	privileges := &v1alpha1.Privileges{}
 	if err := r.Get(ctx, types.NamespacedName(nn), privileges); err != nil {
 		return nil, err
@@ -144,12 +144,12 @@ func (r *PrivilegesBindingReconciler) privileges(ctx context.Context, nn v1alpha
 	return privileges, nil
 }
 
-func (r *PrivilegesBindingReconciler) databaseUsers(ctx context.Context, nns []v1alpha1.NamespacedName, logger logr.Logger) ([]databaseUserBinding, error) {
+func (r *PrivilegesBindingReconciler) databaseUsers(ctx context.Context, nns []v1alpha1.NamespacedName, _ logr.Logger) ([]databaseUserBinding, error) {
 	dbBindings := make([]databaseUserBinding, 0, len(nns))
 	for _, nn := range nns {
 		dbBinding := &v1alpha1.DatabaseBinding{}
 		if err := r.Get(ctx, types.NamespacedName(nn), dbBinding); err != nil {
-			// TODO (alex123012): ????Don't fail all reconcilation because of one deleted DatabaseBinding????
+			// TODO (alex123012): ????Don't fail all reconciliation because of one deleted DatabaseBinding????
 			// logger.Error(err, "can't get DatabaseBinding")
 			// continue
 			return nil, err
@@ -169,7 +169,7 @@ func (r *PrivilegesBindingReconciler) databaseUsers(ctx context.Context, nns []v
 	return dbBindings, nil
 }
 
-func (r *PrivilegesBindingReconciler) revokePrivileges(ctx context.Context, privBinding *v1alpha1.PrivilegesBinding, dbBinding databaseUserBinding, privileges []v1alpha1.PrivilegeSpec, logger logr.Logger) error {
+func (r *PrivilegesBindingReconciler) revokePrivileges(ctx context.Context, _ *v1alpha1.PrivilegesBinding, dbBinding databaseUserBinding, privileges []v1alpha1.PrivilegeSpec, logger logr.Logger) error {
 	db, err := r.DatabaseCreator(ctx, dbBinding.dbConfig.Spec, r.Client, logger)
 	if err != nil {
 		return err
@@ -179,7 +179,7 @@ func (r *PrivilegesBindingReconciler) revokePrivileges(ctx context.Context, priv
 	return db.RevokePrivileges(ctx, dbBinding.user.Name, privileges)
 }
 
-func (r *PrivilegesBindingReconciler) applyPrivileges(ctx context.Context, privBinding *v1alpha1.PrivilegesBinding, dbBinding databaseUserBinding, privileges []v1alpha1.PrivilegeSpec, logger logr.Logger) error {
+func (r *PrivilegesBindingReconciler) applyPrivileges(ctx context.Context, _ *v1alpha1.PrivilegesBinding, dbBinding databaseUserBinding, privileges []v1alpha1.PrivilegeSpec, logger logr.Logger) error {
 	db, err := r.DatabaseCreator(ctx, dbBinding.dbConfig.Spec, r.Client, logger)
 	if err != nil {
 		return err

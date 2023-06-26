@@ -20,6 +20,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/go-logr/logr"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,14 +35,13 @@ import (
 
 	"github.com/alex123012/database-users-operator/api/v1alpha1"
 	"github.com/alex123012/database-users-operator/controllers/internal"
-	"github.com/go-logr/logr"
 )
 
 const (
 	dbBindingFinalizer = "databasebinding.databaseusersoperator.com/finalizer"
 )
 
-// DatabaseBindingReconciler reconciles a DatabaseBinding object
+// DatabaseBindingReconciler reconciles a DatabaseBinding object.
 type DatabaseBindingReconciler struct {
 	client.Client
 	Scheme          *runtime.Scheme
@@ -131,7 +131,7 @@ func (r *DatabaseBindingReconciler) databaseBinding(ctx context.Context, nn type
 	return dbBinding, nil
 }
 
-func (r *DatabaseBindingReconciler) user(ctx context.Context, nn v1alpha1.NamespacedName, logger logr.Logger) (*v1alpha1.User, error) {
+func (r *DatabaseBindingReconciler) user(ctx context.Context, nn v1alpha1.NamespacedName, _ logr.Logger) (*v1alpha1.User, error) {
 	user := &v1alpha1.User{}
 	if err := r.Get(ctx, types.NamespacedName(nn), user); err != nil {
 		return nil, err
@@ -139,7 +139,7 @@ func (r *DatabaseBindingReconciler) user(ctx context.Context, nn v1alpha1.Namesp
 	return user, nil
 }
 
-func (r *DatabaseBindingReconciler) database(ctx context.Context, nn v1alpha1.NamespacedName, logger logr.Logger) (*v1alpha1.Database, error) {
+func (r *DatabaseBindingReconciler) database(ctx context.Context, nn v1alpha1.NamespacedName, _ logr.Logger) (*v1alpha1.Database, error) {
 	db := &v1alpha1.Database{}
 	if err := r.Get(ctx, types.NamespacedName(nn), db); err != nil {
 		return nil, err
@@ -173,7 +173,7 @@ func (r *DatabaseBindingReconciler) createUserInDatabase(ctx context.Context, db
 	return r.Create(ctx, secret)
 }
 
-func (r *DatabaseBindingReconciler) deleteUserInDatabase(ctx context.Context, dbBinding *v1alpha1.DatabaseBinding, user *v1alpha1.User, dbConfig *v1alpha1.Database, logger logr.Logger) error {
+func (r *DatabaseBindingReconciler) deleteUserInDatabase(ctx context.Context, _ *v1alpha1.DatabaseBinding, user *v1alpha1.User, dbConfig *v1alpha1.Database, logger logr.Logger) error {
 	db, err := r.DatabaseCreator(ctx, dbConfig.Spec, r.Client, logger)
 	if err != nil {
 		return err
@@ -204,7 +204,7 @@ func (r *DatabaseBindingReconciler) userPassword(ctx context.Context, user *v1al
 			},
 		)
 	}
-	return string(password), nil
+	return password, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
