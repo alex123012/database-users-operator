@@ -33,6 +33,7 @@ import (
 
 	databaseusersoperatorcomv1alpha1 "github.com/alex123012/database-users-operator/api/v1alpha1"
 	"github.com/alex123012/database-users-operator/controllers"
+	"github.com/alex123012/database-users-operator/controllers/database"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -90,15 +91,17 @@ func main() {
 	}
 
 	if err = (&controllers.PrivilegesBindingReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:          mgr.GetClient(),
+		Scheme:          mgr.GetScheme(),
+		DatabaseCreator: database.NewDatabase,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "PrivilegesBinding")
 		os.Exit(1)
 	}
 	if err = (&controllers.DatabaseBindingReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:          mgr.GetClient(),
+		Scheme:          mgr.GetScheme(),
+		DatabaseCreator: database.NewDatabase,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "DatabaseBinding")
 		os.Exit(1)

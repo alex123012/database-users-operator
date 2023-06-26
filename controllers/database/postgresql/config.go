@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/alex123012/database-users-operator/api/v1alpha1"
 	"github.com/alex123012/database-users-operator/controllers/internal"
 )
 
@@ -15,14 +16,14 @@ type Config struct {
 	Password                           string
 	DatabaseName                       string
 	Port                               int
-	SSLMode                            string
+	SSLMode                            v1alpha1.PostgresSSLMode
 	SSLCACert, SSLUserCert, SSLUserKey string
 	sslCAKey                           string
 
 	createCertificates bool
 }
 
-func NewConfig(host string, port int, user, pass, dbname, sslmode, sslCaCert, sslUserCert, sslUserKey, sslCAKey string) *Config {
+func NewConfig(host string, port int, user, pass, dbname string, sslmode v1alpha1.PostgresSSLMode, sslCaCert, sslUserCert, sslUserKey, sslCAKey string) *Config {
 
 	return &Config{
 		Host:         host,
@@ -56,35 +57,32 @@ func (c *Config) ConnString(deleteFilesSigChan <-chan struct{}) (string, error) 
 	}
 
 	var (
-		sslCACertFile   = fmt.Sprintf("postgres-certs/%s/%s_%s.ca", c.Host, c.DatabaseName, c.User)
-		sslUserCertFile = fmt.Sprintf("postgres-certs/%s/%s_%s.crt", c.Host, c.DatabaseName, c.User)
-		sslUserKeyFile  = fmt.Sprintf("postgres-certs/%s/%s_%s.key", c.Host, c.DatabaseName, c.User)
+		sslCACertFile   = internal.PathFromHome(fmt.Sprintf("postgres-certs/%s/%s_%s.ca", c.Host, c.DatabaseName, c.User))
+		sslUserCertFile = internal.PathFromHome(fmt.Sprintf("postgres-certs/%s/%s_%s.crt", c.Host, c.DatabaseName, c.User))
+		sslUserKeyFile  = internal.PathFromHome(fmt.Sprintf("postgres-certs/%s/%s_%s.key", c.Host, c.DatabaseName, c.User))
 	)
 
 	if c.SSLCACert != "" {
-		f, err := createFileAndReturnName(sslCACertFile, c.SSLCACert)
-		if err != nil {
+		if err := createCertFile(sslCACertFile, c.SSLCACert); err != nil {
 			return "", err
 		}
-		connSlice = append(connSlice, fmt.Sprintf("sslrootcert=%s", f))
+		connSlice = append(connSlice, fmt.Sprintf("sslrootcert=%s", sslCACertFile))
 	}
 
 	if c.SSLUserCert != "" {
 		c.createCertificates = true
-		f, err := createFileAndReturnName(sslUserCertFile, c.SSLUserCert)
-		if err != nil {
+		if err := createCertFile(sslUserCertFile, c.SSLUserCert); err != nil {
 			return "", err
 		}
-		connSlice = append(connSlice, fmt.Sprintf("sslcert=%s", f))
+		connSlice = append(connSlice, fmt.Sprintf("sslcert=%s", sslUserCertFile))
 	}
 
 	if c.SSLUserKey != "" {
 		c.createCertificates = true
-		f, err := createFileAndReturnName(sslUserKeyFile, c.SSLUserKey)
-		if err != nil {
+		if err := createCertFile(sslUserKeyFile, c.SSLUserKey); err != nil {
 			return "", err
 		}
-		connSlice = append(connSlice, fmt.Sprintf("sslkey=%s", f))
+		connSlice = append(connSlice, fmt.Sprintf("sslkey=%s", sslUserKeyFile))
 	}
 
 	go func() {
@@ -97,24 +95,20 @@ func (c *Config) ConnString(deleteFilesSigChan <-chan struct{}) (string, error) 
 	return strings.Join(connSlice, " "), nil
 }
 
-func (in *Config) Copy() *Config {
-	newconf := *in
+func (c *Config) Copy() *Config {
+	newconf := *c
 	return &newconf
 }
 
-func createFileAndReturnName(filename, certData string) (string, error) {
-	f := internal.PathFromHome(filename)
-	if err := createCertFile(f, []byte(certData)); err != nil {
-		return "", err
-	}
-	return f, nil
+func (c *Config) CreateCerts() bool {
+	return c.createCertificates
 }
 
-func createCertFile(path string, data []byte) error {
+func createCertFile(path string, data string) error {
 	dir := filepath.Dir(path)
 	err := os.MkdirAll(dir, 0755)
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(path, data, 0600)
+	return os.WriteFile(path, []byte(data), 0600)
 }

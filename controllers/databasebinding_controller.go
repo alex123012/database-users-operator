@@ -33,7 +33,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/alex123012/database-users-operator/api/v1alpha1"
-	"github.com/alex123012/database-users-operator/controllers/database"
 	"github.com/alex123012/database-users-operator/controllers/internal"
 	"github.com/go-logr/logr"
 )
@@ -45,7 +44,8 @@ const (
 // DatabaseBindingReconciler reconciles a DatabaseBinding object
 type DatabaseBindingReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
+	Scheme          *runtime.Scheme
+	DatabaseCreator databaseCreator
 }
 
 //+kubebuilder:rbac:groups=databaseusersoperator.com,resources=databasebindings,verbs=get;list;watch;create;update;patch;delete
@@ -72,7 +72,7 @@ func (r *DatabaseBindingReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, err
 	}
 
-	dbConfig, err := r.database(ctx, dbBinding.Spec.User, logger)
+	dbConfig, err := r.database(ctx, dbBinding.Spec.Database, logger)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -103,7 +103,18 @@ func (r *DatabaseBindingReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			return ctrl.Result{}, err
 		}
 	}
-	return ctrl.Result{}, r.createUserInDatabase(ctx, dbBinding, user, dbConfig, logger)
+
+	if err := r.createUserInDatabase(ctx, dbBinding, user, dbConfig, logger); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	logger.Info("Successfully created users")
+	dbBinding.Status.Summary = v1alpha1.StatusSummary{
+		Ready:   true,
+		Message: "",
+	}
+
+	return ctrl.Result{}, r.Status().Update(ctx, dbBinding)
 }
 
 func (r *DatabaseBindingReconciler) databaseBinding(ctx context.Context, nn types.NamespacedName, logger logr.Logger) (*v1alpha1.DatabaseBinding, error) {
@@ -137,7 +148,7 @@ func (r *DatabaseBindingReconciler) database(ctx context.Context, nn v1alpha1.Na
 }
 
 func (r *DatabaseBindingReconciler) createUserInDatabase(ctx context.Context, dbBinding *v1alpha1.DatabaseBinding, user *v1alpha1.User, dbConfig *v1alpha1.Database, logger logr.Logger) error {
-	db, err := database.NewDatabase(ctx, dbConfig.Spec, r.Client, logger)
+	db, err := r.DatabaseCreator(ctx, dbConfig.Spec, r.Client, logger)
 	if err != nil {
 		return err
 	}
@@ -163,7 +174,7 @@ func (r *DatabaseBindingReconciler) createUserInDatabase(ctx context.Context, db
 }
 
 func (r *DatabaseBindingReconciler) deleteUserInDatabase(ctx context.Context, dbBinding *v1alpha1.DatabaseBinding, user *v1alpha1.User, dbConfig *v1alpha1.Database, logger logr.Logger) error {
-	db, err := database.NewDatabase(ctx, dbConfig.Spec, r.Client, logger)
+	db, err := r.DatabaseCreator(ctx, dbConfig.Spec, r.Client, logger)
 	if err != nil {
 		return err
 	}

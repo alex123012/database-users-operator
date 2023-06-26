@@ -35,9 +35,9 @@ spec:
           spec:
             description: DatabaseBindingSpec defines the desired state of DatabaseBinding
             properties:
-              databaseConfig:
-                description: DatabaseConfig references to the DatabaseConfig that
-                  will be used to connect to DB
+              database:
+                description: Database references to the Database that will be used
+                  to connect to DB
                 properties:
                   name:
                     description: resource name
@@ -64,7 +64,7 @@ spec:
                 - namespace
                 type: object
             required:
-            - databaseConfig
+            - database
             - user
             type: object
           status:
