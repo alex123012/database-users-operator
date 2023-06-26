@@ -31,5 +31,5 @@ type Connection interface {
 	Copy() Connection
 	Close(ctx context.Context) error
 	Connect(ctx context.Context, driver string, connString string) error
-	Exec(ctx context.Context, disableLog LogInfo, query string) error
+	Exec(ctx context.Context, disableLog LogInfo, query string, args ...interface{}) error
 }
