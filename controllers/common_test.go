@@ -60,9 +60,10 @@ type testDatabase struct {
 	fakeDB            *database.FakeDatabase
 	connectionStrings []string
 	queries           []string
+	removeQueries     []string
 }
 
-func newTestDatabase(namespace string, dbType v1alpha1.DatabaseType, dbConfig interface{}, fakeDB *database.FakeDatabase, connStrings, queries []string) testDatabase {
+func newTestDatabase(namespace string, dbType v1alpha1.DatabaseType, dbConfig interface{}, fakeDB *database.FakeDatabase, connStrings, queries, removeQueries []string) testDatabase {
 	return testDatabase{
 		namespace:         namespace,
 		dbType:            dbType,
@@ -70,6 +71,7 @@ func newTestDatabase(namespace string, dbType v1alpha1.DatabaseType, dbConfig in
 		fakeDB:            fakeDB,
 		connectionStrings: connStrings,
 		queries:           queries,
+		removeQueries:     removeQueries,
 	}
 }
 
@@ -92,7 +94,7 @@ func (t testDatabase) run() {
 		case v1alpha1.MySQL:
 			database.Spec.MySQL = t.dbConfig.(v1alpha1.MySQLConfig)
 		default:
-			Expect(t.dbType).To(Equal("notcompatibledb"))
+			Expect(t.dbType).To(Equal("not supported db"))
 		}
 
 		createObjects(user, secret, database, databaseBinding, privileges, privilegesBinding)
@@ -101,28 +103,37 @@ func (t testDatabase) run() {
 	})
 
 	AfterEach(func() {
+		t.fakeDB.Conn.ResetDB()
 		resetCLuster(t.fakeDB, privilegesBinding, databaseBinding, user, secret, database, privileges)
+		f := checkQueries(t.fakeDB, t.removeQueries)
+		f()
 	})
 
 	It("works", func() {
-		By("Connection strings", func() {
-			connections := t.fakeDB.Conn.Connections()
-			Expect(connections).To(HaveLen(len(t.connectionStrings)))
-			fmt.Println(connections)
-			for _, connString := range t.connectionStrings {
-				Expect(connections[connString]).To(BeTrue())
-			}
-		})
+		By("Connection strings", checkConnectionStrings(t.fakeDB, t.connectionStrings))
 
-		By("Executed queries", func() {
-			queries := t.fakeDB.Conn.Queries()
-			Expect(queries).To(HaveLen(len(t.queries)))
-			fmt.Println(queries)
-			for _, query := range t.queries {
-				Expect(queries[query]).NotTo(Equal(0))
-			}
-		})
+		By("Executed queries", checkQueries(t.fakeDB, t.queries))
 	})
+}
+
+func checkConnectionStrings(fakeDB *database.FakeDatabase, expected []string) func() {
+	return func() {
+		connections := fakeDB.Conn.Connections()
+		Expect(connections).To(HaveLen(len(expected)))
+		for _, connString := range expected {
+			Expect(connections[connString]).To(BeTrue())
+		}
+	}
+}
+
+func checkQueries(fakeDB *database.FakeDatabase, expected []string) func() {
+	return func() {
+		queries := fakeDB.Conn.Queries()
+		Expect(queries).To(HaveLen(len(expected)))
+		for _, query := range expected {
+			Expect(queries[query]).NotTo(Equal(0))
+		}
+	}
 }
 
 func waitForDatabaseBindingReady(databaseBinding *v1alpha1.DatabaseBinding) {

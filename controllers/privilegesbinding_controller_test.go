@@ -44,7 +44,13 @@ var _ = Describe("PrivilegeBindingController", Ordered, func() {
 			`GRANT MY PRIVILEGE TO "user-postgresql"`,
 		}
 
-		tester := newTestDatabase(namespace, v1alpha1.PostgreSQL, cfg, fakeDBCreatorPrivileges, connStrings, queries)
+		removeQueries := []string{
+			`REVOKE MY PRIVILEGE ON "CUSTOM ON" FROM "user-postgresql"`,
+			`REVOKE MY PRIVILEGE ON DATABASE "DB" FROM "user-postgresql"`,
+			`REVOKE MY PRIVILEGE FROM "user-postgresql"`,
+		}
+
+		tester := newTestDatabase(namespace, v1alpha1.PostgreSQL, cfg, fakeDBCreatorPrivileges, connStrings, queries, removeQueries)
 		tester.run()
 	})
 
@@ -54,12 +60,18 @@ var _ = Describe("PrivilegeBindingController", Ordered, func() {
 		connStrings := []string{defaultMysqlConnString}
 
 		queries := []string{
-			`GRANT ? ON ?.* TO ?MY PRIVILEGEDBuser-mysql`,
 			`GRANT ? ON ?.? TO ?MY PRIVILEGEDBCUSTOM ONuser-mysql`,
+			`GRANT ? ON ?.* TO ?MY PRIVILEGEDBuser-mysql`,
 			`GRANT ? TO ?MY PRIVILEGEuser-mysql`,
 		}
 
-		tester := newTestDatabase(namespace, v1alpha1.MySQL, cfg, fakeDBCreatorPrivileges, connStrings, queries)
+		removeQueries := []string{
+			`REVOKE ? ON ?.? FROM ?MY PRIVILEGEDBCUSTOM ONuser-mysql`,
+			`REVOKE ? ON ?.* FROM ?MY PRIVILEGEDBuser-mysql`,
+			`REVOKE ? FROM ?MY PRIVILEGEuser-mysql`,
+		}
+
+		tester := newTestDatabase(namespace, v1alpha1.MySQL, cfg, fakeDBCreatorPrivileges, connStrings, queries, removeQueries)
 		tester.run()
 	})
 })

@@ -38,7 +38,11 @@ var _ = Describe("DatabaseBindingController", Ordered, func() {
 			`CREATE USER "user-postgresql" WITH PASSWORD 'mysupersecretpass'`,
 		}
 
-		tester := newTestDatabase(namespace, v1alpha1.PostgreSQL, cfg, fakeDBCreatorDB, connStrings, queries)
+		removeQueries := []string{
+			`DROP USER "user-postgresql"`,
+		}
+
+		tester := newTestDatabase(namespace, v1alpha1.PostgreSQL, cfg, fakeDBCreatorDB, connStrings, queries, removeQueries)
 		tester.run()
 	})
 
@@ -50,7 +54,11 @@ var _ = Describe("DatabaseBindingController", Ordered, func() {
 			`CREATE USER ?@? IDENTIFIED BY ?user-mysql*mysupersecretpass`,
 		}
 
-		tester := newTestDatabase(namespace, v1alpha1.MySQL, cfg, fakeDBCreatorDB, connStrings, queries)
+		removeQueries := []string{
+			`DROP USER ?@?user-mysql*`,
+		}
+
+		tester := newTestDatabase(namespace, v1alpha1.MySQL, cfg, fakeDBCreatorDB, connStrings, queries, removeQueries)
 		tester.run()
 	})
 })
