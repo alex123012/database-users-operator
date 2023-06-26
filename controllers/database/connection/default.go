@@ -39,25 +39,15 @@ func (d *defaultConnector) Close(ctx context.Context) error {
 	return d.db.Close()
 }
 
-func (d *defaultConnector) infoLog(disableLog LogInfo, q string, args []interface{}) {
+func (d *defaultConnector) infoLog(disableLog LogInfo, query string) {
 	if disableLog == DisableLogger {
 		return
 	}
-	d.logger.Info(fmt.Sprintf("Executing statement '%s' with values: %v", q, args))
+	d.logger.Info(fmt.Sprintf("Executing statement '%s'", query))
 }
 
-func (d *defaultConnector) Exec(ctx context.Context, disableLog LogInfo, query string, args ...interface{}) error {
-	d.infoLog(disableLog, query, args)
-	_, err := d.db.ExecContext(ctx, query, args...)
+func (d *defaultConnector) Exec(ctx context.Context, disableLog LogInfo, query string) error {
+	d.infoLog(disableLog, query)
+	_, err := d.db.ExecContext(ctx, query)
 	return err
 }
-
-// func (d *defaultConnector) Query(ctx context.Context, disableLog LogInfo, query string, args ...interface{}) (*sqlx.Rows, error) {
-// 	d.infoLog(disableLog, query, args)
-// 	return d.db.QueryxContext(ctx, query, args...)
-// }
-
-// func (d *defaultConnector) Select(ctx context.Context, disableLog LogInfo, dest interface{}, query string, args ...interface{}) error {
-// 	d.infoLog(disableLog, query, args)
-// 	return sqlx.SelectContext(ctx, d.db, dest, query, args...)
-// }

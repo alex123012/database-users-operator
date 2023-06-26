@@ -18,21 +18,21 @@ import (
 	"github.com/go-logr/logr"
 )
 
-type dbConnection interface {
+type Connection interface {
 	Copy() interface{}
 	Close(ctx context.Context) error
 	Connect(ctx context.Context, driver string, connString string) error
-	Exec(ctx context.Context, disableLog connection.LogInfo, query string, args ...interface{}) error
+	Exec(ctx context.Context, disableLog connection.LogInfo, query string) error
 }
 
 type Postgresql struct {
-	db         dbConnection
+	db         Connection
 	config     *Config
 	logger     logr.Logger
 	cfgSigChan chan struct{}
 }
 
-func NewPostgresql(c dbConnection, config *Config, logger logr.Logger) *Postgresql {
+func NewPostgresql(c Connection, config *Config, logger logr.Logger) *Postgresql {
 	return &Postgresql{
 		config: config,
 		db:     c,
@@ -61,7 +61,7 @@ func (p *Postgresql) CreateUser(ctx context.Context, username, password string) 
 	err := p.db.Exec(ctx, logInfo, query)
 
 	var sslCertificates map[string]string
-	if p.config.createCertificates && !isAlreadyExists(err) {
+	if p.config.CreateCerts() && !isAlreadyExists(err) {
 		var err error
 		sslCertificates, err = p.genPostgresCertFromCA(username)
 		if err != nil {
@@ -113,7 +113,7 @@ func (p *Postgresql) privilegesProcessor(ctx context.Context, username string, p
 		case privelege.Database != "" && privelege.On != "" && privelege.Privilege != "":
 			err = p.inDatabasePrivilege(ctx, username, privelege.Database, privelege.On, privelege.Privilege, statement, arg)
 
-		case privelege.On != "" && privelege.Privilege != "":
+		case privelege.Database != "" && privelege.Privilege != "":
 			err = p.databasePrivilege(ctx, username, privelege.Database, privelege.Privilege, statement, arg)
 
 		case privelege.Privilege != "":
@@ -134,7 +134,7 @@ func (p *Postgresql) inDatabasePrivilege(ctx context.Context, username, dbname, 
 	newconf := p.config.Copy()
 	newconf.DatabaseName = dbname
 	conn := p.db.Copy()
-	newP := NewPostgresql(conn.(dbConnection), newconf, p.logger)
+	newP := NewPostgresql(conn.(Connection), newconf, p.logger)
 	if err := newP.Connect(ctx); err != nil {
 		return err
 	}

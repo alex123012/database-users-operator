@@ -25,18 +25,25 @@ type dbConnection interface {
 	Close(ctx context.Context) error
 	Copy() interface{}
 	Connect(ctx context.Context, driver string, connString string) error
-	Exec(ctx context.Context, disableLog connection.LogInfo, query string, args ...interface{}) error
+	Exec(ctx context.Context, disableLog connection.LogInfo, query string) error
 }
 
 func NewDatabase(ctx context.Context, s v1alpha1.DatabaseSpec, kClient client.Client, logger logr.Logger) (Interface, error) {
 	conn := connection.NewDefaultConnector(logger)
-	switch s.Type {
-	case v1alpha1.PostgreSQL:
-		return newPostgresql(ctx, conn, s.PostgreSQL, kClient, logger)
-	}
-	return nil, fmt.Errorf("can't find supported DB type '%s'", s.Type)
+	return newDatabase(ctx, conn, s, kClient, logger)
 }
 
+func newDatabase(ctx context.Context, conn dbConnection, s v1alpha1.DatabaseSpec, kClient client.Client, logger logr.Logger) (Interface, error) {
+	var db Interface
+	var err error
+	switch s.Type {
+	case v1alpha1.PostgreSQL:
+		db, err = newPostgresql(ctx, conn, s.PostgreSQL, kClient, logger)
+	default:
+		err = fmt.Errorf("can't find supported DB type '%s'", s.Type)
+	}
+	return db, err
+}
 func newPostgresql(ctx context.Context, conn dbConnection, c v1alpha1.PostgreSQLConfig, kClient client.Client, logger logr.Logger) (*postgresql.Postgresql, error) {
 	sslData := make(map[string]string, 0)
 	var sslCAKey string
@@ -63,7 +70,8 @@ func newPostgresql(ctx context.Context, conn dbConnection, c v1alpha1.PostgreSQL
 	}
 
 	cfg := postgresql.NewConfig(c.Host, c.Port, c.User, password, c.DatabaseName,
-		string(c.SSLMode), sslData["ca.crt"], sslData["tls.crt"], sslData["tls.key"], sslCAKey)
+		c.SSLMode, sslData["ca.crt"], sslData["tls.crt"], sslData["tls.key"], sslCAKey)
 
-	return postgresql.NewPostgresql(conn, cfg, logger), nil
+	p := postgresql.NewPostgresql(conn, cfg, logger)
+	return p, p.Connect(ctx)
 }

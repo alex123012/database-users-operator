@@ -22,8 +22,8 @@ import (
 
 // DatabaseBindingSpec defines the desired state of DatabaseBinding
 type DatabaseBindingSpec struct {
-	// DatabaseConfig references to the DatabaseConfig that will be used to connect to DB
-	DatabaseConfig NamespacedName `json:"databaseConfig"`
+	// Database references to the Database that will be used to connect to DB
+	Database NamespacedName `json:"database"`
 
 	// Users holds references to the objects the privileges applies to.
 	User NamespacedName `json:"user"`

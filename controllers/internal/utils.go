@@ -29,6 +29,7 @@ func DecodeSecretData(ctx context.Context, nn types.NamespacedName, kClient clie
 	return data, nil
 }
 
-func PathFromHome(path string) string {
-	return filepath.Join(os.Getenv("HOME"), path)
+func PathFromHome(paths ...string) string {
+	paths = append([]string{os.Getenv("HOME")}, paths...)
+	return filepath.Join(paths...)
 }
