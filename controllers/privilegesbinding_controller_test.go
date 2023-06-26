@@ -42,7 +42,7 @@ var _ = Describe("PrivilegeBindingController", func() {
 		privilegesBinding *v1alpha1.PrivilegesBinding
 		namespace         = "default"
 	)
-	Context("default behaviour", func() {
+	Context("PostgreSQL", func() {
 		BeforeEach(func() {
 			user, database, databaseBinding, privileges, privilegesBinding = privilegesBindingBundle(namespace, v1alpha1.PostgreSQL)
 			createObjects(user, database, databaseBinding, privileges, privilegesBinding)
