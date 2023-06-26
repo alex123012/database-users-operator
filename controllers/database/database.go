@@ -26,6 +26,7 @@ import (
 
 	"github.com/alex123012/database-users-operator/api/v1alpha1"
 	"github.com/alex123012/database-users-operator/controllers/database/connection"
+	"github.com/alex123012/database-users-operator/controllers/database/mysql"
 	"github.com/alex123012/database-users-operator/controllers/database/postgresql"
 	"github.com/alex123012/database-users-operator/controllers/internal"
 )
@@ -49,6 +50,8 @@ func newDatabase(ctx context.Context, conn connection.Connection, s v1alpha1.Dat
 	switch s.Type {
 	case v1alpha1.PostgreSQL:
 		db, err = newPostgresql(ctx, conn, s.PostgreSQL, client, logger)
+	case v1alpha1.MySQL:
+		db, err = newMysql(ctx, conn, s.MySQL, client, logger)
 	default:
 		err = fmt.Errorf("can't find supported DB type '%s'", s.Type)
 	}
@@ -72,15 +75,25 @@ func newPostgresql(ctx context.Context, conn connection.Connection, c v1alpha1.P
 	}
 
 	password, err := passwordFromSecret(ctx, client, c.PasswordSecret)
-		if err != nil {
-			return nil, err
-		}
+	if err != nil {
+		return nil, err
+	}
 
 	cfg := postgresql.NewConfig(c.Host, c.Port, c.User, password, c.DatabaseName,
 		c.SSLMode, sslData["ca.crt"], sslData["tls.crt"], sslData["tls.key"], sslCAKey)
 
 	p := postgresql.NewPostgresql(conn, cfg, logger)
 	return p, p.Connect(ctx)
+}
+
+func newMysql(ctx context.Context, conn connection.Connection, c v1alpha1.MySQLConfig, client client.Client, logger logr.Logger) (*mysql.Mysql, error) {
+	password, err := passwordFromSecret(ctx, client, c.PasswordSecret)
+	if err != nil {
+		return nil, err
+	}
+	cfg := mysql.NewConfig(c.Host, c.Port, c.User, password, c.DatabaseName, c.UsersHostname)
+	m := mysql.NewMysql(conn, cfg, logger)
+	return m, m.Connect(ctx)
 }
 
 func passwordFromSecret(ctx context.Context, client client.Client, secretNN v1alpha1.Secret) (string, error) {

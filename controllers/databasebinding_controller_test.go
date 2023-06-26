@@ -61,6 +61,25 @@ var _ = Describe("DatabaseBindingController", func() {
 			})
 		})
 	})
+
+	Context("MySQL", func() {
+		BeforeEach(func() {
+			user, secret, database, databaseBinding = databaseBindingBundle(namespace, v1alpha1.MySQL)
+			createObjects(user, secret, database, databaseBinding)
+			waitForDatabaseBindingReady(databaseBinding)
+		})
+
+		AfterEach(func() {
+			resetCLusterAndDB(fakeDBCreatorDB, databaseBinding, user, secret, database)
+		})
+
+		It("works", func() {
+			queries := fakeDBCreatorDB.Conn.Queries()
+			By("Created user in DB", func() {
+				Expect(queries[`CREATE USER ?@? IDENTIFIED BY ?user-1*mysupersecretpass`]).NotTo(Equal(0))
+			})
+		})
+	})
 })
 
 func waitForDatabaseBindingReady(databaseBinding *v1alpha1.DatabaseBinding) {

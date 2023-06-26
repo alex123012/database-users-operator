@@ -21,7 +21,8 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	_ "github.com/jackc/pgx/v5/stdlib" // package for sqlx driver
+	_ "github.com/go-sql-driver/mysql" // package for mysql
+	_ "github.com/jackc/pgx/v5/stdlib" // package for postgres
 	"github.com/jmoiron/sqlx"
 )
 
