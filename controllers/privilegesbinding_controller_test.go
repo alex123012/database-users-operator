@@ -22,10 +22,8 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/alex123012/database-users-operator/api/v1alpha1"
 )
@@ -47,23 +45,12 @@ var _ = Describe("PrivilegeBindingController", func() {
 	Context("default behaviour", func() {
 		BeforeEach(func() {
 			user, database, databaseBinding, privileges, privilegesBinding = privilegesBindingBundle(namespace, v1alpha1.PostgreSQL)
-			Expect(k8sClient.Create(ctx, user)).To(Succeed())
-			Expect(k8sClient.Create(ctx, database)).To(Succeed())
-			Expect(k8sClient.Create(ctx, databaseBinding)).To(Succeed())
-			Expect(k8sClient.Create(ctx, privileges)).To(Succeed())
-			Expect(k8sClient.Create(ctx, privilegesBinding)).To(Succeed())
+			createObjects(user, database, databaseBinding, privileges, privilegesBinding)
 			waitForPrivilegesBindingReady(privilegesBinding)
 		})
 
 		AfterEach(func() {
-			for _, o := range []client.Object{privilegesBinding, databaseBinding, user, database, privileges} {
-				Expect(k8sClient.Delete(ctx, o)).To(Succeed())
-				Eventually(func(o client.Object) bool {
-					err := k8sClient.Get(ctx, types.NamespacedName{Name: o.GetName(), Namespace: o.GetNamespace()}, o)
-					return apierrors.IsNotFound(err)
-				}, 5).WithArguments(o).Should(BeTrue())
-			}
-			fakeDBCreatorPrivileges.ResetDB()
+			resetCLusterAndDB(fakeDBCreatorPrivileges, privilegesBinding, databaseBinding, user, database, privileges)
 		})
 
 		It("works", func() {
