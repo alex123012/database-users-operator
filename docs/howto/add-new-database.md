@@ -26,3 +26,5 @@
 1. To run tests use `make test`
 
 1. Make PR to repo.
+
+You can refer to [commit](https://github.com/alex123012/database-users-operator/commit/a328f5b7e64479193dd2e24b248cd8953495c1a2), where MySQL support was added
