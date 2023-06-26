@@ -77,19 +77,28 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `databaseType` _[DatabaseType](#databasetype)_ | Type of database to connect, required |
+| `databaseType` _DatabaseType_ | Type of database to connect, required |
 | `postgreSql` _[PostgreSQLConfig](#postgresqlconfig)_ | Config for connecting for PostgreSQL compatible databases, not required. required if DatabaseType equals to "PostgreSQL" |
+| `mySql` _[MySQLConfig](#mysqlconfig)_ | Config for connecting for MySQL compatible databases, not required. required if DatabaseType equals to "MySQL" |
 
 
-#### DatabaseType
+#### MySQLConfig
 
-_Underlying type:_ `string`
 
-Database types that are currently supported.
+
+
 
 _Appears in:_
 - [DatabaseSpec](#databasespec)
 
+| Field | Description |
+| --- | --- |
+| `host` _string_ | Full DNS name/ip for database to use, required. If K8S service is used to connect - provide host as <db-service-name>.<db-service-namespace>.svc.cluster.local refer to --host flag in https://dev.mysql.com/doc/refman/8.0/en/connection-options.html |
+| `port` _integer_ | k8s-service/database port to connect to execute queries, defaults to 5432. refer to --port flag in https://dev.mysql.com/doc/refman/8.0/en/connection-options.html |
+| `databaseName` _string_ | Database name that will be used to connect to database, not required. see https://dev.mysql.com/doc/refman/8.0/en/connecting.html. |
+| `user` _string_ | The MySQL user account to provide for the authentication process. It must have at least CREATE ROLE privilege (if you won't provide superuser acess to users) or database superuser role if you think you'll be needed to give some users database superuser privileges refer to --user flag in https://dev.mysql.com/doc/refman/8.0/en/connection-options.html and https://dev.mysql.com/doc/refman/8.0/en/privileges-provided.html#privileges-provided-guidelines "Privilege-Granting Guidelines" |
+| `passwordSecret` _[Secret](#secret)_ | Secret with password for User to connect to database refer to --password flag in https://dev.mysql.com/doc/refman/8.0/en/connection-options.html |
+| `usersHostname` _string_ | The hostname from which this user will connect By default "*" will be used (So users would be "<user>@*") |
 
 
 #### NamespacedName
@@ -214,6 +223,7 @@ _Appears in:_
 Secret is a reference for kubernetes secret.
 
 _Appears in:_
+- [MySQLConfig](#mysqlconfig)
 - [PostgreSQLConfig](#postgresqlconfig)
 - [User](#user)
 

@@ -62,6 +62,28 @@ var _ = Describe("PrivilegeBindingController", func() {
 			})
 		})
 	})
+
+	Context("MySQL", func() {
+		BeforeEach(func() {
+			user, database, databaseBinding, privileges, privilegesBinding = privilegesBindingBundle(namespace, v1alpha1.MySQL)
+			createObjects(user, database, databaseBinding, privileges, privilegesBinding)
+			waitForPrivilegesBindingReady(privilegesBinding)
+		})
+
+		AfterEach(func() {
+			resetCLusterAndDB(fakeDBCreatorPrivileges, privilegesBinding, databaseBinding, user, database, privileges)
+		})
+
+		It("works", func() {
+			queries := fakeDBCreatorPrivileges.Conn.Queries()
+			fmt.Println(queries)
+			By("Applied privileges to user in DB", func() {
+				Expect(queries[`GRANT ? ON ?.? TO ?MY PRIVILEGEDBCUSTOM ONuser-2`]).NotTo(Equal(0))
+				Expect(queries[`GRANT ? ON ?.* TO ?MY PRIVILEGEDBuser-2`]).NotTo(Equal(0))
+				Expect(queries[`GRANT ? TO ?MY PRIVILEGEuser-2`]).NotTo(Equal(0))
+			})
+		})
+	})
 })
 
 func waitForPrivilegesBindingReady(privilegesBinding *v1alpha1.PrivilegesBinding) {

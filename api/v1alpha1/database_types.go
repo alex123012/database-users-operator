@@ -25,6 +25,7 @@ type DatabaseType string
 
 const (
 	PostgreSQL DatabaseType = "PostgreSQL"
+	MySQL      DatabaseType = "MySQL"
 )
 
 // DatabaseSpec defines the desired state of Database.
@@ -35,6 +36,10 @@ type DatabaseSpec struct {
 	// Config for connecting for PostgreSQL compatible databases, not required.
 	// required if DatabaseType equals to "PostgreSQL"
 	PostgreSQL PostgreSQLConfig `json:"postgreSql,omitempty"`
+
+	// Config for connecting for MySQL compatible databases, not required.
+	// required if DatabaseType equals to "MySQL"
+	MySQL MySQLConfig `json:"mySql,omitempty"`
 }
 
 type PostgresSSLMode string
@@ -95,6 +100,37 @@ type PostgreSQLConfig struct {
 	// If SSL Mode equals to "require", "verify-ca" or "verify-full" - not required.
 	// refer to --password flag in https://www.postgresql.org/docs/current/app-psql.html
 	PasswordSecret Secret `json:"passwordSecret,omitempty"`
+}
+
+type MySQLConfig struct {
+	// Full DNS name/ip for database to use, required.
+	// If K8S service is used to connect - provide host
+	// as <db-service-name>.<db-service-namespace>.svc.cluster.local
+	// refer to --host flag in https://dev.mysql.com/doc/refman/8.0/en/connection-options.html
+	Host string `json:"host"`
+
+	// k8s-service/database port to connect to execute queries, defaults to 5432.
+	// refer to --port flag in https://dev.mysql.com/doc/refman/8.0/en/connection-options.html
+	Port int `json:"port"`
+
+	// Database name that will be used to connect to database, not required.
+	// see https://dev.mysql.com/doc/refman/8.0/en/connecting.html.
+	DatabaseName string `json:"databaseName,omitempty"`
+
+	// The MySQL user account to provide for the authentication process.
+	// It must have at least CREATE ROLE privilege (if you won't provide superuser acess to users)
+	// or database superuser role if you think you'll be needed to give some users database superuser privileges
+	// refer to --user flag in https://dev.mysql.com/doc/refman/8.0/en/connection-options.html
+	// and https://dev.mysql.com/doc/refman/8.0/en/privileges-provided.html#privileges-provided-guidelines "Privilege-Granting Guidelines"
+	User string `json:"user"`
+
+	// Secret with password for User to connect to database
+	// refer to --password flag in https://dev.mysql.com/doc/refman/8.0/en/connection-options.html
+	PasswordSecret Secret `json:"passwordSecret,omitempty"`
+
+	// The hostname from which this user will connect
+	// By default "*" will be used (So users would be "<user>@*")
+	UsersHostname string `json:"usersHostname"`
 }
 
 //+kubebuilder:object:root=true

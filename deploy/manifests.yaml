@@ -127,6 +127,53 @@ spec:
               databaseType:
                 description: Type of database to connect, required
                 type: string
+              mySql:
+                description: Config for connecting for MySQL compatible databases, not required. required if DatabaseType equals to "MySQL"
+                properties:
+                  databaseName:
+                    description: Database name that will be used to connect to database, not required. see https://dev.mysql.com/doc/refman/8.0/en/connecting.html.
+                    type: string
+                  host:
+                    description: Full DNS name/ip for database to use, required. If K8S service is used to connect - provide host as <db-service-name>.<db-service-namespace>.svc.cluster.local refer to --host flag in https://dev.mysql.com/doc/refman/8.0/en/connection-options.html
+                    type: string
+                  passwordSecret:
+                    description: Secret with password for User to connect to database refer to --password flag in https://dev.mysql.com/doc/refman/8.0/en/connection-options.html
+                    properties:
+                      key:
+                        description: Kubernetes secret key with data
+                        type: string
+                      secret:
+                        description: Secret is secret name and namespace
+                        properties:
+                          name:
+                            description: resource name
+                            type: string
+                          namespace:
+                            description: resource namespace
+                            type: string
+                        required:
+                        - name
+                        - namespace
+                        type: object
+                    required:
+                    - key
+                    - secret
+                    type: object
+                  port:
+                    description: k8s-service/database port to connect to execute queries, defaults to 5432. refer to --port flag in https://dev.mysql.com/doc/refman/8.0/en/connection-options.html
+                    type: integer
+                  user:
+                    description: The MySQL user account to provide for the authentication process. It must have at least CREATE ROLE privilege (if you won't provide superuser acess to users) or database superuser role if you think you'll be needed to give some users database superuser privileges refer to --user flag in https://dev.mysql.com/doc/refman/8.0/en/connection-options.html and https://dev.mysql.com/doc/refman/8.0/en/privileges-provided.html#privileges-provided-guidelines "Privilege-Granting Guidelines"
+                    type: string
+                  usersHostname:
+                    description: The hostname from which this user will connect By default "*" will be used (So users would be "<user>@*")
+                    type: string
+                required:
+                - host
+                - port
+                - user
+                - usersHostname
+                type: object
               postgreSql:
                 description: Config for connecting for PostgreSQL compatible databases, not required. required if DatabaseType equals to "PostgreSQL"
                 properties:
