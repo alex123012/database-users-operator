@@ -47,7 +47,8 @@ ifeq ($(USE_IMAGE_DIGESTS), true)
 endif
 
 # Image URL to use all building/pushing image targets
-IMG ?= ghcr.io/alex123012/database-users-operator:v$(VERSION)
+IMG_REPO ?= ghcr.io/alex123012/database-users-operator
+IMG ?= $(IMG_REPO):v$(VERSION)
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.26.0
 
@@ -121,6 +122,23 @@ api-docs: crd-ref-docs ## Generate API documentation
 		--output-path ./docs/api/api.md \
 		--max-depth=30 \
 		--renderer=markdown
+##@ E2E
+
+.PHONY: git-commit-sha
+git-commit-sha:
+ifeq ("", git diff --stat)
+GIT_COMMIT=$(shell git rev-parse --short HEAD)
+else
+GIT_COMMIT=$(shell git rev-parse --short HEAD)-
+endif
+
+.PHONY: prepare-kind
+prepare-kind: git-commit-sha manifests ## Deploy operator to kind cluster
+	docker buildx build --load -t $(IMG_REPO):$(GIT_COMMIT) .
+	kind load docker-image $(IMG_REPO):$(GIT_COMMIT)
+	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG_REPO):$(GIT_COMMIT)
+	$(KUSTOMIZE) build config/default | kubectl apply -f -
+	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 
 ##@ Build
 
