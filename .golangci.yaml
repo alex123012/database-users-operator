@@ -1,0 +1,57 @@
+run:
+  timeout: 10m
+
+issues:
+  exclude:
+  - ST1005.*
+  - "should not use dot imports"
+  - "don't use an underscore in package name"
+  - "exported: .*"
+
+linters-settings:
+  gci:
+    sections:
+      - standard
+      - default
+      - prefix(github.com/alex123012/)
+  goimports:
+    local-prefixes: github.com/alex123012/
+  errcheck:
+    ignore: fmt:.*,[rR]ead|[wW]rite|[cC]lose,io:Copy
+  gosec:
+    ignore: rand.Int63()
+
+linters:
+  enable-all: true
+  disable:
+    - wrapcheck
+    - varnamelen
+    - paralleltest
+    - nilnil
+    - nlreturn
+    - gomnd
+    - goerr113
+    - gochecknoglobals
+    - exhaustivestruct
+    - exhaustruct
+    - forcetypeassert
+    - funlen
+    - gochecknoinits
+    - godox
+    - cyclop
+    - containedctx
+    - wsl
+    - gocognit
+    - lll
+    - ireturn
+    - gosec
+    - scopelint
+    # deprecated:
+    - structcheck
+    - varcheck
+    - interfacer
+    - maligned
+    - deadcode
+    - golint
+    - ifshort
+    - nosnakecase

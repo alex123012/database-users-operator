@@ -4,18 +4,19 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/alex123012/database-users-operator/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/alex123012/database-users-operator/api/v1alpha1"
 )
 
 const (
 	privilegesBindingCreationTimeout = 3 * time.Second
-	privilegesBindingDeletionTimeout = 3 * time.Second
+	// privilegesBindingDeletionTimeout = 3 * time.Second.
 )
 
 var _ = Describe("PrivilegeBindingController", func() {
@@ -41,10 +42,10 @@ var _ = Describe("PrivilegeBindingController", func() {
 		AfterEach(func() {
 			for _, o := range []client.Object{privilegesBinding, databaseBinding, user, database, privileges} {
 				Expect(k8sClient.Delete(ctx, o)).To(Succeed())
-				Eventually(func() bool {
+				Eventually(func(o client.Object) bool {
 					err := k8sClient.Get(ctx, types.NamespacedName{Name: o.GetName(), Namespace: o.GetNamespace()}, o)
 					return apierrors.IsNotFound(err)
-				}, 5).Should(BeTrue())
+				}, 5).WithArguments(o).Should(BeTrue())
 			}
 			fakeDBCreatorPrivileges.ResetDB()
 		})
@@ -76,7 +77,6 @@ func waitForPrivilegesBindingReady(privilegesBinding *v1alpha1.PrivilegesBinding
 		}
 
 		return "ready"
-
 	}, privilegesBindingCreationTimeout, 1*time.Second).Should(Equal("ready"))
 }
 

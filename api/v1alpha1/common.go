@@ -16,7 +16,7 @@ limitations under the License.
 
 package v1alpha1
 
-// Secret is a reference for kubernetes secret
+// Secret is a reference for kubernetes secret.
 type Secret struct {
 	// Secret is secret name and namespace
 	Secret NamespacedName `json:"secret"`
@@ -28,7 +28,7 @@ type NamespacedName struct {
 	// resource namespace
 	Namespace string `json:"namespace"`
 
-	//resource name
+	// resource name
 	Name string `json:"name"`
 }
 

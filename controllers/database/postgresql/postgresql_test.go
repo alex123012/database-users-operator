@@ -8,14 +8,14 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/go-logr/logr"
+
 	"github.com/alex123012/database-users-operator/api/v1alpha1"
 	"github.com/alex123012/database-users-operator/controllers/database/connection"
 	"github.com/alex123012/database-users-operator/controllers/database/postgresql"
-	"github.com/go-logr/logr"
 )
 
 func TestPostgresql(t *testing.T) {
-
 	type fields struct {
 		config *postgresql.Config
 		logger logr.Logger

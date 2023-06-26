@@ -5,26 +5,26 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	_ "github.com/jackc/pgx/v5/stdlib"
+	_ "github.com/jackc/pgx/v5/stdlib" // package for sqlx driver
 	"github.com/jmoiron/sqlx"
 )
 
-type defaultConnector struct {
+type DefaultConnector struct {
 	db     *sqlx.DB
 	logger logr.Logger
 }
 
-func NewDefaultConnector(logger logr.Logger) *defaultConnector {
-	return &defaultConnector{
+func NewDefaultConnector(logger logr.Logger) *DefaultConnector {
+	return &DefaultConnector{
 		logger: logger,
 	}
 }
 
-func (d *defaultConnector) Copy() interface{} {
+func (d *DefaultConnector) Copy() interface{} {
 	return NewDefaultConnector(d.logger)
 }
 
-func (d *defaultConnector) Connect(ctx context.Context, driver, connString string) error {
+func (d *DefaultConnector) Connect(ctx context.Context, driver, connString string) error {
 	db, err := sqlx.ConnectContext(ctx, driver, connString)
 	if err != nil {
 		return err
@@ -35,18 +35,18 @@ func (d *defaultConnector) Connect(ctx context.Context, driver, connString strin
 	return nil
 }
 
-func (d *defaultConnector) Close(ctx context.Context) error {
+func (d *DefaultConnector) Close(_ context.Context) error {
 	return d.db.Close()
 }
 
-func (d *defaultConnector) infoLog(disableLog LogInfo, query string) {
+func (d *DefaultConnector) infoLog(disableLog LogInfo, query string) {
 	if disableLog == DisableLogger {
 		return
 	}
 	d.logger.Info(fmt.Sprintf("Executing statement '%s'", query))
 }
 
-func (d *defaultConnector) Exec(ctx context.Context, disableLog LogInfo, query string) error {
+func (d *DefaultConnector) Exec(ctx context.Context, disableLog LogInfo, query string) error {
 	d.infoLog(disableLog, query)
 	_, err := d.db.ExecContext(ctx, query)
 	return err

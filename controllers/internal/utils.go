@@ -11,9 +11,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func DecodeSecretData(ctx context.Context, nn types.NamespacedName, kClient client.Client) (map[string]string, error) {
+func DecodeSecretData(ctx context.Context, nn types.NamespacedName, client client.Client) (map[string]string, error) {
 	secret := &v1.Secret{}
-	if err := kClient.Get(ctx, nn, secret); err != nil {
+	if err := client.Get(ctx, nn, secret); err != nil {
 		return nil, err
 	}
 

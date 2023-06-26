@@ -13,9 +13,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-logr/logr"
+
 	"github.com/alex123012/database-users-operator/api/v1alpha1"
 	"github.com/alex123012/database-users-operator/controllers/database/connection"
-	"github.com/go-logr/logr"
 )
 
 type Connection interface {
@@ -56,7 +57,7 @@ func (p *Postgresql) Close(ctx context.Context) error {
 }
 
 func (p *Postgresql) CreateUser(ctx context.Context, username, password string) (map[string]string, error) {
-	//TODO (alex123012): use gorm.Statement, refer to https://gorm.io/docs/sql_builder.html#Clauses
+	// TODO (alex123012): use gorm.Statement, refer to https://gorm.io/docs/sql_builder.html#Clauses
 	query, logInfo := createUserQuery(username, password)
 	err := p.db.Exec(ctx, logInfo, query)
 
@@ -86,7 +87,7 @@ func createUserQuery(username, password string) (string, connection.LogInfo) {
 }
 
 func (p *Postgresql) DeleteUser(ctx context.Context, username string) error {
-	//TODO (alex123012): use gorm.Statement, refer to https://gorm.io/docs/sql_builder.html#Clauses
+	// TODO (alex123012): use gorm.Statement, refer to https://gorm.io/docs/sql_builder.html#Clauses
 	query := deleteUserQuery(username)
 	return p.db.Exec(ctx, connection.EnableLogger, query)
 }
@@ -107,20 +108,20 @@ func (p *Postgresql) RevokePrivileges(ctx context.Context, username string, priv
 }
 
 func (p *Postgresql) privilegesProcessor(ctx context.Context, username string, privileges []v1alpha1.PrivilegeSpec, statement, arg string) error {
-	for _, privelege := range privileges {
+	for _, privilege := range privileges {
 		var err error
 		switch {
-		case privelege.Database != "" && privelege.On != "" && privelege.Privilege != "":
-			err = p.inDatabasePrivilege(ctx, username, privelege.Database, privelege.On, privelege.Privilege, statement, arg)
+		case privilege.Database != "" && privilege.On != "" && privilege.Privilege != "":
+			err = p.inDatabasePrivilege(ctx, username, privilege.Database, privilege.On, privilege.Privilege, statement, arg)
 
-		case privelege.Database != "" && privelege.Privilege != "":
-			err = p.databasePrivilege(ctx, username, privelege.Database, privelege.Privilege, statement, arg)
+		case privilege.Database != "" && privilege.Privilege != "":
+			err = p.databasePrivilege(ctx, username, privilege.Database, privilege.Privilege, statement, arg)
 
-		case privelege.Privilege != "":
-			err = p.privilege(ctx, username, privelege.Privilege, statement, arg)
+		case privilege.Privilege != "":
+			err = p.privilege(ctx, username, privilege.Privilege, statement, arg)
 
 		default:
-			err = errors.New("can't use this type of privelege")
+			err = errors.New("can't use this type of privilege")
 		}
 
 		if err != nil {
@@ -130,7 +131,7 @@ func (p *Postgresql) privilegesProcessor(ctx context.Context, username string, p
 	return nil
 }
 
-func (p *Postgresql) inDatabasePrivilege(ctx context.Context, username, dbname, on string, privelege v1alpha1.PrivilegeType, statement, arg string) error {
+func (p *Postgresql) inDatabasePrivilege(ctx context.Context, username, dbname, on string, privilege v1alpha1.PrivilegeType, statement, arg string) error {
 	newconf := p.config.Copy()
 	newconf.DatabaseName = dbname
 	conn := p.db.Copy()
@@ -139,25 +140,25 @@ func (p *Postgresql) inDatabasePrivilege(ctx context.Context, username, dbname, 
 		return err
 	}
 	defer newP.Close(ctx)
-	query := prepareStatementForPrivilege(statement, arg, username, dbname, on, privelege)
+	query := prepareStatementForPrivilege(statement, arg, username, dbname, on, privilege)
 	return newP.db.Exec(ctx, connection.EnableLogger, query)
 }
 
-func (p *Postgresql) databasePrivilege(ctx context.Context, username, dbname string, privelege v1alpha1.PrivilegeType, statement, arg string) error {
-	query := prepareStatementForPrivilege(statement, arg, username, dbname, "", privelege)
+func (p *Postgresql) databasePrivilege(ctx context.Context, username, dbname string, privilege v1alpha1.PrivilegeType, statement, arg string) error {
+	query := prepareStatementForPrivilege(statement, arg, username, dbname, "", privilege)
 	return p.db.Exec(ctx, connection.EnableLogger, query)
 }
 
-func (p *Postgresql) privilege(ctx context.Context, username string, privelege v1alpha1.PrivilegeType, statement, arg string) error {
-	query := prepareStatementForPrivilege(statement, arg, username, "", "", privelege)
+func (p *Postgresql) privilege(ctx context.Context, username string, privilege v1alpha1.PrivilegeType, statement, arg string) error {
+	query := prepareStatementForPrivilege(statement, arg, username, "", "", privilege)
 	return p.db.Exec(ctx, connection.EnableLogger, query)
 }
 
-func prepareStatementForPrivilege(statement, arg, username, dbname, on string, privelege v1alpha1.PrivilegeType) string {
+func prepareStatementForPrivilege(statement, arg, username, dbname, on string, privilege v1alpha1.PrivilegeType) string {
 	stmtBuilder := &strings.Builder{}
 	stmtBuilder.WriteString(statement)
 	stmtBuilder.WriteString(" ")
-	stmtBuilder.WriteString(escapeLiteralWithoutQuotes(string(privelege)))
+	stmtBuilder.WriteString(escapeLiteralWithoutQuotes(string(privilege)))
 
 	if on != "" {
 		stmtBuilder.WriteString(" ON ")
