@@ -81,16 +81,19 @@ type PostgreSQLConfig struct {
 	// Secret with SSL CA certificate ("ca.crt" key), user certificate ("tls.crt" key) and user key ("tls.key" key).
 	// If SSL Mode equals to "disable", "allow" or "prefer" field is not required.
 	// If SSL Mode equals to "require", "verify-ca" or "verify-full" - required.
+	// see https://www.postgresql.org/docs/current/libpq-ssl.html
 	SSLCredentialsSecret NamespacedName `json:"sslSecrets,omitempty"`
 
 	// Secret with CA key for creating users certificates
 	// If SSL Mode equals to "disable", "allow" or "prefer" field is not required.
 	// If SSL Mode equals to "require", "verify-ca" or "verify-full" - required.
+	// see https://www.postgresql.org/docs/current/libpq-ssl.html
 	SSLCAKey Secret `json:"sslCaKey,omitempty"`
 
 	// Secret with password for User to connect to database
 	// If SSL Mode equals to "disable", "allow" or "prefer" field is required.
 	// If SSL Mode equals to "require", "verify-ca" or "verify-full" - not required.
+	// refer to --password flag in https://www.postgresql.org/docs/current/app-psql.html
 	PasswordSecret Secret `json:"passwordSecret,omitempty"`
 }
 
