@@ -114,6 +114,14 @@ lint: golangci-lint ## Run linting against code
 fix: golangci-lint ## Run linting with fixes against code
 	$(GOLANGCI_LINT) run --fix
 
+api-docs: crd-ref-docs ## Generate API documentation
+	crd-ref-docs \
+		--source-path=./api/v1alpha1 \
+		--config=./docs/api/gen/config.yaml \
+		--output-path ./docs/api/api.md \
+		--max-depth=30 \
+		--renderer=markdown
+
 ##@ Build
 
 .PHONY: build
@@ -187,11 +195,13 @@ KUSTOMIZE ?= $(LOCALBIN)/kustomize
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 ENVTEST ?= $(LOCALBIN)/setup-envtest
 GOLANGCI_LINT ?= $(LOCALBIN)/golangci-lint
+CRD_REF_DOCS ?= $(LOCALBIN)/crd-ref-docs
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v3.8.7
-GOLANGCI_VERSION ?= 1.52.2
+GOLANGCI_LINT_VERSION ?= v1.52.0
 CONTROLLER_TOOLS_VERSION ?= v0.11.1
+CRD_REF_DOCS_VERSION ?= v0.0.9
 
 KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"
 .PHONY: kustomize
@@ -212,7 +222,13 @@ $(CONTROLLER_GEN): $(LOCALBIN)
 .PHONY: golangci-lint
 golangci-lint: $(GOLANGCI_LINT) ## Download golangci-lint locally if necessary.
 $(GOLANGCI_LINT): $(LOCALBIN)
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | BINARY=$(GOLANGCI_LINT) bash -s -- v${GOLANGCI_VERSION}
+	test -s $(LOCALBIN)/golangci-lint && $(LOCALBIN)/golangci-lint --version | grep -q $(GOLANGCI_LINT_VERSION) || \
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | BINARY=$(GOLANGCI_LINT) bash -s -- ${GOLANGCI_LINT_VERSION}
+
+.PHONY: crd-ref-docs
+crd-ref-docs: $(CRD_REF_DOCS) ## Download crd-ref-docs locally if necessary.
+$(CRD_REF_DOCS): $(LOCALBIN)
+	test -s $(LOCALBIN)/crd-ref-docs ||	GOBIN=$(LOCALBIN) go install github.com/elastic/crd-ref-docs@$(CRD_REF_DOCS_VERSION)
 
 .PHONY: envtest
 envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
