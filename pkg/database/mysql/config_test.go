@@ -19,7 +19,7 @@ package mysql_test
 import (
 	"testing"
 
-	"github.com/alex123012/database-users-operator/controllers/database/mysql"
+	"github.com/alex123012/database-users-operator/pkg/database/mysql"
 )
 
 func TestConfig_ConnString(t *testing.T) {

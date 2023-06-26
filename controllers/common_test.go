@@ -6,7 +6,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/alex123012/database-users-operator/controllers/database"
+	"github.com/alex123012/database-users-operator/pkg/database"
 )
 
 func resetCLusterAndDB(db *database.FakeDatabase, objects ...client.Object) {

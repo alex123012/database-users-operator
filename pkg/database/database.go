@@ -25,10 +25,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/alex123012/database-users-operator/api/v1alpha1"
-	"github.com/alex123012/database-users-operator/controllers/database/connection"
-	"github.com/alex123012/database-users-operator/controllers/database/mysql"
-	"github.com/alex123012/database-users-operator/controllers/database/postgresql"
-	"github.com/alex123012/database-users-operator/controllers/internal"
+	"github.com/alex123012/database-users-operator/pkg/database/connection"
+	"github.com/alex123012/database-users-operator/pkg/database/mysql"
+	"github.com/alex123012/database-users-operator/pkg/database/postgresql"
+	"github.com/alex123012/database-users-operator/pkg/utils"
 )
 
 type Database interface {
@@ -63,11 +63,11 @@ func newPostgresql(ctx context.Context, conn connection.Connection, c v1alpha1.P
 	var sslCAKey string
 	if c.SSLMode == v1alpha1.SSLModeREQUIRE || c.SSLMode == v1alpha1.SSLModeVERIFYCA || c.SSLMode == v1alpha1.SSLModeVERIFYFULL {
 		var err error
-		sslData, err = internal.DecodeSecretData(ctx, types.NamespacedName(c.SSLCredentialsSecret), client)
+		sslData, err = utils.DecodeSecretData(ctx, types.NamespacedName(c.SSLCredentialsSecret), client)
 		if err != nil {
 			return nil, err
 		}
-		sslCAData, err := internal.DecodeSecretData(ctx, types.NamespacedName(c.SSLCAKey.Secret), client)
+		sslCAData, err := utils.DecodeSecretData(ctx, types.NamespacedName(c.SSLCAKey.Secret), client)
 		if err != nil {
 			return nil, err
 		}
@@ -99,7 +99,7 @@ func newMysql(ctx context.Context, conn connection.Connection, c v1alpha1.MySQLC
 func passwordFromSecret(ctx context.Context, client client.Client, secretNN v1alpha1.Secret) (string, error) {
 	var password string
 	if secretNN.Key != "" && secretNN.Secret.Name != "" && secretNN.Secret.Namespace != "" {
-		data, err := internal.DecodeSecretData(ctx, types.NamespacedName(secretNN.Secret), client)
+		data, err := utils.DecodeSecretData(ctx, types.NamespacedName(secretNN.Secret), client)
 		if err != nil {
 			return "", err
 		}

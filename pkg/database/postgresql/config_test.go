@@ -24,7 +24,7 @@ import (
 	"time"
 
 	"github.com/alex123012/database-users-operator/api/v1alpha1"
-	"github.com/alex123012/database-users-operator/controllers/database/postgresql"
+	"github.com/alex123012/database-users-operator/pkg/database/postgresql"
 )
 
 func TestConfig_ConnString(t *testing.T) {

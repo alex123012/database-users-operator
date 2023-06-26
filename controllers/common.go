@@ -23,7 +23,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/alex123012/database-users-operator/api/v1alpha1"
-	"github.com/alex123012/database-users-operator/controllers/database"
+	"github.com/alex123012/database-users-operator/pkg/database"
 )
 
 type databaseCreator func(ctx context.Context, s v1alpha1.DatabaseSpec, client client.Client, logger logr.Logger) (database.Database, error)

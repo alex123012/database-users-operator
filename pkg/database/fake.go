@@ -24,7 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/alex123012/database-users-operator/api/v1alpha1"
-	"github.com/alex123012/database-users-operator/controllers/database/connection"
+	"github.com/alex123012/database-users-operator/pkg/database/connection"
 )
 
 type fakeConnection interface {

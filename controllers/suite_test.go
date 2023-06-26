@@ -33,7 +33,7 @@ import (
 
 	databaseusersoperatorcomv1alpha1 "github.com/alex123012/database-users-operator/api/v1alpha1"
 	"github.com/alex123012/database-users-operator/controllers"
-	"github.com/alex123012/database-users-operator/controllers/database"
+	"github.com/alex123012/database-users-operator/pkg/database"
 )
 
 //+kubebuilder:scaffold:imports

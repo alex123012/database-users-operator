@@ -23,7 +23,7 @@ import (
 	"strings"
 
 	"github.com/alex123012/database-users-operator/api/v1alpha1"
-	"github.com/alex123012/database-users-operator/controllers/internal"
+	"github.com/alex123012/database-users-operator/pkg/utils"
 )
 
 type Config struct {
@@ -72,9 +72,9 @@ func (c *Config) ConnString(deleteFilesSigChan <-chan struct{}) (string, error) 
 	}
 
 	var (
-		sslCACertFile   = internal.PathFromHome(fmt.Sprintf("postgres-certs/%s/%s_%s.ca", c.Host, c.DatabaseName, c.User))
-		sslUserCertFile = internal.PathFromHome(fmt.Sprintf("postgres-certs/%s/%s_%s.crt", c.Host, c.DatabaseName, c.User))
-		sslUserKeyFile  = internal.PathFromHome(fmt.Sprintf("postgres-certs/%s/%s_%s.key", c.Host, c.DatabaseName, c.User))
+		sslCACertFile   = utils.PathFromHome(fmt.Sprintf("postgres-certs/%s/%s_%s.ca", c.Host, c.DatabaseName, c.User))
+		sslUserCertFile = utils.PathFromHome(fmt.Sprintf("postgres-certs/%s/%s_%s.crt", c.Host, c.DatabaseName, c.User))
+		sslUserKeyFile  = utils.PathFromHome(fmt.Sprintf("postgres-certs/%s/%s_%s.key", c.Host, c.DatabaseName, c.User))
 	)
 
 	if c.SSLCACert != "" {

@@ -34,7 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/alex123012/database-users-operator/api/v1alpha1"
-	"github.com/alex123012/database-users-operator/controllers/internal"
+	"github.com/alex123012/database-users-operator/pkg/utils"
 )
 
 const (
@@ -189,7 +189,7 @@ func (r *DatabaseBindingReconciler) userPassword(ctx context.Context, user *v1al
 		return "", nil
 	}
 
-	data, err := internal.DecodeSecretData(ctx, types.NamespacedName(secretCfg.Secret), r.Client)
+	data, err := utils.DecodeSecretData(ctx, types.NamespacedName(secretCfg.Secret), r.Client)
 	if err != nil {
 		return "", err
 	}

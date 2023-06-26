@@ -27,8 +27,8 @@ import (
 	"github.com/go-logr/logr"
 
 	"github.com/alex123012/database-users-operator/api/v1alpha1"
-	"github.com/alex123012/database-users-operator/controllers/database/connection"
-	"github.com/alex123012/database-users-operator/controllers/database/postgresql"
+	"github.com/alex123012/database-users-operator/pkg/database/connection"
+	"github.com/alex123012/database-users-operator/pkg/database/postgresql"
 )
 
 func TestPostgresql(t *testing.T) {
