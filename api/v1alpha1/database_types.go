@@ -20,6 +20,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// Database types that are currently supported.
+type DatabaseType string
+
+const (
+	PostgreSQL DatabaseType = "PostgreSQL"
+)
+
 // DatabaseSpec defines the desired state of Database.
 type DatabaseSpec struct {
 	// Type of database to connect, required
@@ -29,13 +36,6 @@ type DatabaseSpec struct {
 	// required if DatabaseType equals to "PostgreSQL"
 	PostgreSQL PostgreSQLConfig `json:"postgreSql,omitempty"`
 }
-
-// Database types that are currently supported.
-type DatabaseType string
-
-const (
-	PostgreSQL DatabaseType = "PostgreSQL"
-)
 
 type PostgresSSLMode string
 

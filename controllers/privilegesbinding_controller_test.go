@@ -1,3 +1,19 @@
+/*
+Copyright 2023.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package controllers_test
 
 import (
@@ -30,7 +46,7 @@ var _ = Describe("PrivilegeBindingController", func() {
 	)
 	Context("default behaviour", func() {
 		BeforeEach(func() {
-			user, database, databaseBinding, privileges, privilegesBinding = privilegesBindingBundle(namespace)
+			user, database, databaseBinding, privileges, privilegesBinding = privilegesBindingBundle(namespace, v1alpha1.PostgreSQL)
 			Expect(k8sClient.Create(ctx, user)).To(Succeed())
 			Expect(k8sClient.Create(ctx, database)).To(Succeed())
 			Expect(k8sClient.Create(ctx, databaseBinding)).To(Succeed())
@@ -80,14 +96,14 @@ func waitForPrivilegesBindingReady(privilegesBinding *v1alpha1.PrivilegesBinding
 	}, privilegesBindingCreationTimeout, 1*time.Second).Should(Equal("ready"))
 }
 
-func privilegesBindingBundle(namespace string) (*v1alpha1.User, *v1alpha1.Database, *v1alpha1.DatabaseBinding, *v1alpha1.Privileges, *v1alpha1.PrivilegesBinding) {
+func privilegesBindingBundle(namespace string, dbType v1alpha1.DatabaseType) (*v1alpha1.User, *v1alpha1.Database, *v1alpha1.DatabaseBinding, *v1alpha1.Privileges, *v1alpha1.PrivilegesBinding) {
 	database := &v1alpha1.Database{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
 			Name:      "database-2",
 		},
 		Spec: v1alpha1.DatabaseSpec{
-			Type: v1alpha1.PostgreSQL,
+			Type: dbType,
 		},
 	}
 

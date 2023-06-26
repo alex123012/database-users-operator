@@ -1,3 +1,19 @@
+/*
+Copyright 2023.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package database
 
 import (
@@ -14,7 +30,7 @@ import (
 	"github.com/alex123012/database-users-operator/controllers/internal"
 )
 
-type Interface interface {
+type Database interface {
 	Close(cxt context.Context) error
 	CreateUser(ctx context.Context, username, password string) (map[string]string, error)
 	DeleteUser(ctx context.Context, username string) error
@@ -22,20 +38,13 @@ type Interface interface {
 	RevokePrivileges(ctx context.Context, username string, privileges []v1alpha1.PrivilegeSpec) error
 }
 
-type dbConnection interface {
-	Close(ctx context.Context) error
-	Copy() interface{}
-	Connect(ctx context.Context, driver string, connString string) error
-	Exec(ctx context.Context, disableLog connection.LogInfo, query string) error
-}
-
-func NewDatabase(ctx context.Context, s v1alpha1.DatabaseSpec, client client.Client, logger logr.Logger) (Interface, error) {
+func NewDatabase(ctx context.Context, s v1alpha1.DatabaseSpec, client client.Client, logger logr.Logger) (Database, error) {
 	conn := connection.NewDefaultConnector(logger)
 	return newDatabase(ctx, conn, s, client, logger)
 }
 
-func newDatabase(ctx context.Context, conn dbConnection, s v1alpha1.DatabaseSpec, client client.Client, logger logr.Logger) (Interface, error) {
-	var db Interface
+func newDatabase(ctx context.Context, conn connection.Connection, s v1alpha1.DatabaseSpec, client client.Client, logger logr.Logger) (Database, error) {
+	var db Database
 	var err error
 	switch s.Type {
 	case v1alpha1.PostgreSQL:
@@ -46,7 +55,7 @@ func newDatabase(ctx context.Context, conn dbConnection, s v1alpha1.DatabaseSpec
 	return db, err
 }
 
-func newPostgresql(ctx context.Context, conn dbConnection, c v1alpha1.PostgreSQLConfig, client client.Client, logger logr.Logger) (*postgresql.Postgresql, error) {
+func newPostgresql(ctx context.Context, conn connection.Connection, c v1alpha1.PostgreSQLConfig, client client.Client, logger logr.Logger) (*postgresql.Postgresql, error) {
 	sslData := make(map[string]string, 0)
 	var sslCAKey string
 	if c.SSLMode == v1alpha1.SSLModeREQUIRE || c.SSLMode == v1alpha1.SSLModeVERIFYCA || c.SSLMode == v1alpha1.SSLModeVERIFYFULL {
