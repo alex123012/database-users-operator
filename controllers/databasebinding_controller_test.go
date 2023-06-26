@@ -24,10 +24,8 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/alex123012/database-users-operator/api/v1alpha1"
 )
@@ -45,25 +43,15 @@ var _ = Describe("DatabaseBindingController", func() {
 		databaseBinding *v1alpha1.DatabaseBinding
 		namespace       = "default"
 	)
-	Context("default behaviour", func() {
+	Context("PostgreSQL", func() {
 		BeforeEach(func() {
-			user, secret, database, databaseBinding = databaseBindingBundle(namespace)
-			Expect(k8sClient.Create(ctx, user)).To(Succeed())
-			Expect(k8sClient.Create(ctx, secret)).To(Succeed())
-			Expect(k8sClient.Create(ctx, database)).To(Succeed())
-			Expect(k8sClient.Create(ctx, databaseBinding)).To(Succeed())
+			user, secret, database, databaseBinding = databaseBindingBundle(namespace, v1alpha1.PostgreSQL)
+			createObjects(user, secret, database, databaseBinding)
 			waitForDatabaseBindingReady(databaseBinding)
 		})
 
 		AfterEach(func() {
-			for _, o := range []client.Object{databaseBinding, user, database} {
-				Expect(k8sClient.Delete(ctx, o)).To(Succeed())
-				Eventually(func(o client.Object) bool {
-					err := k8sClient.Get(ctx, types.NamespacedName{Name: o.GetName(), Namespace: o.GetNamespace()}, o)
-					return apierrors.IsNotFound(err)
-				}, 5).WithArguments(o).Should(BeTrue())
-			}
-			fakeDBCreatorDB.ResetDB()
+			resetCLusterAndDB(fakeDBCreatorDB, databaseBinding, user, secret, database)
 		})
 
 		It("works", func() {
@@ -94,14 +82,14 @@ func waitForDatabaseBindingReady(databaseBinding *v1alpha1.DatabaseBinding) {
 	}, databaseBindingCreationTimeout, 1*time.Second).Should(Equal("ready"))
 }
 
-func databaseBindingBundle(namespace string) (*v1alpha1.User, *v1.Secret, *v1alpha1.Database, *v1alpha1.DatabaseBinding) {
+func databaseBindingBundle(namespace string, dbType v1alpha1.DatabaseType) (*v1alpha1.User, *v1.Secret, *v1alpha1.Database, *v1alpha1.DatabaseBinding) {
 	database := &v1alpha1.Database{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "database-1",
 			Namespace: namespace,
 		},
 		Spec: v1alpha1.DatabaseSpec{
-			Type: v1alpha1.PostgreSQL,
+			Type: dbType,
 		},
 	}
 

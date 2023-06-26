@@ -71,18 +71,26 @@ func newPostgresql(ctx context.Context, conn connection.Connection, c v1alpha1.P
 		sslCAKey = sslCAData[c.SSLCAKey.Key]
 	}
 
-	var password string
-	if c.PasswordSecret.Key != "" && c.PasswordSecret.Secret.Name != "" && c.PasswordSecret.Secret.Namespace != "" {
-		data, err := internal.DecodeSecretData(ctx, types.NamespacedName(c.PasswordSecret.Secret), client)
+	password, err := passwordFromSecret(ctx, client, c.PasswordSecret)
 		if err != nil {
 			return nil, err
 		}
-		password = data[c.PasswordSecret.Key]
-	}
 
 	cfg := postgresql.NewConfig(c.Host, c.Port, c.User, password, c.DatabaseName,
 		c.SSLMode, sslData["ca.crt"], sslData["tls.crt"], sslData["tls.key"], sslCAKey)
 
 	p := postgresql.NewPostgresql(conn, cfg, logger)
 	return p, p.Connect(ctx)
+}
+
+func passwordFromSecret(ctx context.Context, client client.Client, secretNN v1alpha1.Secret) (string, error) {
+	var password string
+	if secretNN.Key != "" && secretNN.Secret.Name != "" && secretNN.Secret.Namespace != "" {
+		data, err := internal.DecodeSecretData(ctx, types.NamespacedName(secretNN.Secret), client)
+		if err != nil {
+			return "", err
+		}
+		password = data[secretNN.Key]
+	}
+	return password, nil
 }
