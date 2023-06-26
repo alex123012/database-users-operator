@@ -18,7 +18,7 @@ spec:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: Database is the Schema for the databases API
+        description: Database is the Schema for the databases API.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -33,12 +33,12 @@ spec:
           metadata:
             type: object
           spec:
-            description: DatabaseSpec defines the desired state of Database
+            description: DatabaseSpec defines the desired state of Database.
             properties:
               databaseType:
                 description: Type of database to connect, required
                 type: string
-              postgreSQL:
+              postgreSql:
                 description: Config for connecting for PostgreSQL compatible databases,
                   not required. required if DatabaseType equals to "PostgreSQL"
                 properties:
@@ -81,7 +81,7 @@ spec:
                     description: k8s-service/database port to connect to execute queries,
                       defaults to 5432. refer to --port flag in https://www.postgresql.org/docs/current/app-psql.html
                     type: integer
-                  sslCAKey:
+                  sslCaKey:
                     description: Secret with CA key for creating users certificates
                       If SSL Mode equals to "disable", "allow" or "prefer" field is
                       not required. If SSL Mode equals to "require", "verify-ca" or

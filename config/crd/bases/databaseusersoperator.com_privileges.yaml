@@ -18,7 +18,7 @@ spec:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: Privileges is the Schema for the privileges API
+        description: Privileges is the Schema for the privileges API.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -34,7 +34,7 @@ spec:
             type: object
           spec:
             items:
-              description: PrivilegesSpec defines the desired state of Privileges
+              description: PrivilegesSpec defines the desired state of Privileges.
               properties:
                 database:
                   description: If Privilege is database specific - this field will

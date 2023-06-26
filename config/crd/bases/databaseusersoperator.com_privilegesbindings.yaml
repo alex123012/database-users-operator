@@ -18,7 +18,7 @@ spec:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: PrivilegesBinding is the Schema for the privilegesbindings API
+        description: PrivilegesBinding is the Schema for the privilegesbindings API.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -33,7 +33,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: PrivilegesBindingSpec defines the desired state of PrivilegesBinding
+            description: PrivilegesBindingSpec defines the desired state of PrivilegesBinding.
             properties:
               databaseBindings:
                 description: DatabaseBinding references to the DatabaseBinding that
@@ -71,7 +71,7 @@ spec:
             - privileges
             type: object
           status:
-            description: PrivilegesBindingStatus defines the observed state of PrivilegesBinding
+            description: PrivilegesBindingStatus defines the observed state of PrivilegesBinding.
             properties:
               summary:
                 properties:
