@@ -28,6 +28,10 @@ import (
 )
 
 func TestConfig_ConnString(t *testing.T) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		t.Error(err, "can't get user home dir")
+	}
 	type fields struct {
 		Host         string
 		User         string
@@ -52,7 +56,7 @@ func TestConfig_ConnString(t *testing.T) {
 	}{
 		{
 			name:                   "SSL config",
-			want:                   "host=postgres user=user port=5432 sslmode=verify-full dbname=dbname password=password sslrootcert=/Users/alexmakh/postgres-certs/postgres/dbname_user.ca sslcert=/Users/alexmakh/postgres-certs/postgres/dbname_user.crt sslkey=/Users/alexmakh/postgres-certs/postgres/dbname_user.key",
+			want:                   fmt.Sprintf("host=postgres user=user port=5432 sslmode=verify-full dbname=dbname password=password sslrootcert=%s/postgres-certs/postgres/dbname_user.ca sslcert=%s/postgres-certs/postgres/dbname_user.crt sslkey=%s/postgres-certs/postgres/dbname_user.key", home, home, home),
 			wantCreateCertificates: true,
 			args: args{
 				deleteFilesSigChan: make(chan struct{}),
