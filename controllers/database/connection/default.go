@@ -55,15 +55,15 @@ func (d *DefaultConnector) Close(_ context.Context) error {
 	return d.db.Close()
 }
 
-func (d *DefaultConnector) infoLog(disableLog LogInfo, query string) {
+func (d *DefaultConnector) infoLog(disableLog LogInfo, query string, args ...interface{}) {
 	if disableLog == DisableLogger {
 		return
 	}
-	d.logger.Info(fmt.Sprintf("Executing statement '%s'", query))
+	d.logger.Info(fmt.Sprintf("Executing statement '%s' with values %v", query, args))
 }
 
-func (d *DefaultConnector) Exec(ctx context.Context, disableLog LogInfo, query string) error {
-	d.infoLog(disableLog, query)
-	_, err := d.db.ExecContext(ctx, query)
+func (d *DefaultConnector) Exec(ctx context.Context, disableLog LogInfo, query string, args ...interface{}) error {
+	d.infoLog(disableLog, query, args...)
+	_, err := d.db.ExecContext(ctx, query, args...)
 	return err
 }

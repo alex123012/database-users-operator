@@ -18,6 +18,7 @@ package connection
 
 import (
 	"context"
+	"fmt"
 	"sync"
 )
 
@@ -56,12 +57,12 @@ func (m *FakeConnection) Copy() Connection {
 	return m
 }
 
-func (m *FakeConnection) Exec(_ context.Context, _ LogInfo, query string) error {
+func (m *FakeConnection) Exec(_ context.Context, _ LogInfo, query string, args ...interface{}) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	m.count++
 	m.queries[query] = m.count
-	m.list = append(m.list, query)
+	m.list = append(m.list, fmt.Sprintf(query, args...))
 	return nil
 }
 
