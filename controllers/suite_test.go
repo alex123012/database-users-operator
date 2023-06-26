@@ -50,6 +50,7 @@ var (
 
 	fakeDBCreatorDB         = database.NewFakeDatabase()
 	fakeDBCreatorPrivileges = database.NewFakeDatabase()
+	namespace               = "default"
 )
 
 func TestAPIs(t *testing.T) {

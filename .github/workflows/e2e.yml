@@ -28,4 +28,4 @@ jobs:
           node_image: kindest/node:v1.26.6
 
       - name: Setup operator
-        run: make prepare-kind
+        run: make run-e2e

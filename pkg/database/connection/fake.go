@@ -23,10 +23,10 @@ import (
 )
 
 type FakeConnection struct {
-	queries map[string]int
-	list    []string
-	count   int
-	lock    *sync.RWMutex
+	queries     map[string]int
+	count       int
+	connections map[string]bool
+	lock        *sync.RWMutex
 }
 
 func NewFakeConnection() *FakeConnection {
@@ -35,15 +35,20 @@ func NewFakeConnection() *FakeConnection {
 	}
 }
 
-func (m *FakeConnection) Connect(_ context.Context, _, _ string) error {
+func (m *FakeConnection) Connect(_ context.Context, driver, connString string) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	if m.queries != nil {
-		return nil
+	if m.queries == nil {
+		m.queries = make(map[string]int)
 	}
 
-	m.queries = make(map[string]int)
+	if m.connections == nil {
+		m.connections = make(map[string]bool)
+	}
+
+	m.connections[fmt.Sprintf("%s:%s", driver, connString)] = true
+
 	return nil
 }
 
@@ -63,7 +68,6 @@ func (m *FakeConnection) Exec(_ context.Context, _ LogInfo, query string, args .
 	q := fmt.Sprint(append([]interface{}{query}, args...)...)
 	m.count++
 	m.queries[q] = m.count
-	m.list = append(m.list, q)
 	return nil
 }
 
@@ -73,19 +77,15 @@ func (m *FakeConnection) Queries() map[string]int {
 	return m.queries
 }
 
-func (m *FakeConnection) QueriesList() []string {
+func (m *FakeConnection) Connections() map[string]bool {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
-	return m.list
+	return m.connections
 }
 
-func (m *FakeConnection) SetDB(db map[string]int) {
+func (m *FakeConnection) ResetDB() {
 	m.lock.Lock()
 	defer m.lock.Unlock()
-	m.queries = db
-	m.count = 0
-}
-
-func (m *FakeConnection) SetLock(lock *sync.RWMutex) {
-	m.lock = lock
+	m.queries = make(map[string]int)
+	m.connections = make(map[string]bool)
 }

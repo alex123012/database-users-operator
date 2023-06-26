@@ -38,7 +38,7 @@ spec:
               databaseType:
                 description: Type of database to connect, required
                 type: string
-              mySql:
+              mySQL:
                 description: Config for connecting for MySQL compatible databases,
                   not required. required if DatabaseType equals to "MySQL"
                 properties:
@@ -98,7 +98,7 @@ spec:
                 - user
                 - usersHostname
                 type: object
-              postgreSql:
+              postgreSQL:
                 description: Config for connecting for PostgreSQL compatible databases,
                   not required. required if DatabaseType equals to "PostgreSQL"
                 properties:

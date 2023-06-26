@@ -35,11 +35,11 @@ type DatabaseSpec struct {
 
 	// Config for connecting for PostgreSQL compatible databases, not required.
 	// required if DatabaseType equals to "PostgreSQL"
-	PostgreSQL PostgreSQLConfig `json:"postgreSql,omitempty"`
+	PostgreSQL PostgreSQLConfig `json:"postgreSQL,omitempty"`
 
 	// Config for connecting for MySQL compatible databases, not required.
 	// required if DatabaseType equals to "MySQL"
-	MySQL MySQLConfig `json:"mySql,omitempty"`
+	MySQL MySQLConfig `json:"mySQL,omitempty"`
 }
 
 type PostgresSSLMode string

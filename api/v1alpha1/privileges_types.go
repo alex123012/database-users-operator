@@ -25,14 +25,14 @@ type PrivilegeType string
 // PrivilegesSpec defines the desired state of Privileges.
 type PrivilegeSpec struct {
 	// Privilege is role name or PrivilegeType
-	Privilege PrivilegeType `json:"privilege" postgres:"privilege_type"`
+	Privilege PrivilegeType `json:"privilege"`
 
 	// if used PrivilegeType from PrivilegeTypeTable in Privilege field
 	// specify object to give Privilege to in database
-	On string `json:"on,omitempty" postgres:"table_name"`
+	On string `json:"on,omitempty"`
 
 	// If Privilege is database specific - this field will be used to determine which db to use
-	Database string `json:"database,omitempty" postgres:"table_catalog"`
+	Database string `json:"database,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -42,7 +42,7 @@ type Privileges struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Privileges []PrivilegeSpec `json:"spec,omitempty"`
+	Privileges []PrivilegeSpec `json:"privileges,omitempty"`
 }
 
 //+kubebuilder:object:root=true

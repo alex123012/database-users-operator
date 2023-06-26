@@ -32,7 +32,7 @@ spec:
             type: string
           metadata:
             type: object
-          spec:
+          privileges:
             items:
               description: PrivilegesSpec defines the desired state of Privileges.
               properties:

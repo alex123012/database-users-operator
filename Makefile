@@ -140,6 +140,10 @@ prepare-kind: git-commit-sha manifests ## Deploy operator to kind cluster
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 
+.PHONY: run-e2e
+run-e2e:  ## Run E2E tests
+	E2E_TESTS=yes K8S_OPERATOR_NAMESPACE=database-users-operator-system go test -v ./test/e2e/...
+
 ##@ Build
 
 .PHONY: build

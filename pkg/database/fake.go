@@ -18,7 +18,6 @@ package database
 
 import (
 	"context"
-	"sync"
 
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -30,28 +29,17 @@ import (
 type fakeConnection interface {
 	connection.Connection
 	Queries() map[string]int
-	QueriesList() []string
+	Connections() map[string]bool
+	ResetDB()
 }
 
 type FakeDatabase struct {
 	Conn fakeConnection
-	DB   map[string]int
-	Lock *sync.RWMutex
 }
 
 func NewFakeDatabase() *FakeDatabase {
-	conn := connection.NewFakeConnection()
-
-	db := make(map[string]int)
-	conn.SetDB(db)
-
-	lock := &sync.RWMutex{}
-	conn.SetLock(lock)
-
 	return &FakeDatabase{
-		DB:   db,
-		Lock: lock,
-		Conn: conn,
+		Conn: connection.NewFakeConnection(),
 	}
 }
 
@@ -59,10 +47,4 @@ func (f *FakeDatabase) DatabaseCreatorFunc() func(context.Context, v1alpha1.Data
 	return func(ctx context.Context, s v1alpha1.DatabaseSpec, client client.Client, logger logr.Logger) (Database, error) {
 		return newDatabase(ctx, f.Conn, s, client, logger)
 	}
-}
-
-func (f *FakeDatabase) ResetDB() {
-	f.Lock.Lock()
-	defer f.Lock.Unlock()
-	f.DB = make(map[string]int)
 }
