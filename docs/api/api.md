@@ -60,7 +60,7 @@ _Appears in:_
 
 | Field | Description |
 | --- | --- |
-| `database` _[NamespacedName](#namespacedname)_ | Database references to the Database that will be used to connect to DB |
+| `database` _string_ | Database references to the Database that will be used to connect to DB |
 | `user` _[NamespacedName](#namespacedname)_ | Users holds references to the objects the privileges applies to. |
 
 
@@ -78,8 +78,8 @@ _Appears in:_
 | Field | Description |
 | --- | --- |
 | `databaseType` _DatabaseType_ | Type of database to connect, required |
-| `postgreSql` _[PostgreSQLConfig](#postgresqlconfig)_ | Config for connecting for PostgreSQL compatible databases, not required. required if DatabaseType equals to "PostgreSQL" |
-| `mySql` _[MySQLConfig](#mysqlconfig)_ | Config for connecting for MySQL compatible databases, not required. required if DatabaseType equals to "MySQL" |
+| `postgreSQL` _[PostgreSQLConfig](#postgresqlconfig)_ | Config for connecting for PostgreSQL compatible databases, not required. required if DatabaseType equals to "PostgreSQL" |
+| `mySQL` _[MySQLConfig](#mysqlconfig)_ | Config for connecting for MySQL compatible databases, not required. required if DatabaseType equals to "MySQL" |
 
 
 #### MySQLConfig
@@ -180,7 +180,7 @@ Privileges is the Schema for the privileges API.
 | `apiVersion` _string_ | `databaseusersoperator.com/v1alpha1`
 | `kind` _string_ | `Privileges`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[PrivilegeSpec](#privilegespec) array_ |  |
+| `privileges` _[PrivilegeSpec](#privilegespec) array_ |  |
 
 
 #### PrivilegesBinding

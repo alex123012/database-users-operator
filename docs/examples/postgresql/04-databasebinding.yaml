@@ -1,0 +1,13 @@
+---
+apiVersion: databaseusersoperator.com/v1alpha1
+kind: DatabaseBinding
+metadata:
+  name: postgres-john
+  namespace: test-database-users-operator
+spec:
+  database:
+    name: postgres
+    namespace: test-database-users-operator
+  user:
+    name: john
+    namespace: test-database-users-operator
