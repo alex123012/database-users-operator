@@ -193,5 +193,9 @@ func (r *PrivilegesBindingReconciler) applyPrivileges(ctx context.Context, _ *v1
 func (r *PrivilegesBindingReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.PrivilegesBinding{}).
+		Owns(&v1alpha1.DatabaseBinding{}).
+		Owns(&v1alpha1.Privileges{}).
+		Owns(&v1alpha1.Database{}).
+		Owns(&v1alpha1.User{}).
 		Complete(r)
 }

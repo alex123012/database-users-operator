@@ -2,7 +2,6 @@ package utils
 
 import (
 	"context"
-	"encoding/base64"
 	"os"
 	"path/filepath"
 
@@ -19,11 +18,7 @@ func DecodeSecretData(ctx context.Context, nn types.NamespacedName, client clien
 
 	data := make(map[string]string)
 	for key, value := range secret.Data {
-		decodedValue, err := base64.StdEncoding.DecodeString(string(value))
-		if err != nil {
-			return nil, err
-		}
-		data[key] = string(decodedValue)
+		data[key] = string(value)
 	}
 
 	return data, nil

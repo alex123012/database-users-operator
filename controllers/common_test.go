@@ -17,7 +17,6 @@ limitations under the License.
 package controllers_test
 
 import (
-	"encoding/base64"
 	"fmt"
 	"strings"
 	"time"
@@ -246,8 +245,8 @@ func bundle(namespace string, dbType v1alpha1.DatabaseType) (*v1alpha1.User, *v1
 			Name:      name("user-password"),
 			Namespace: namespace,
 		},
-		Data: map[string][]byte{
-			"pass": []byte(base64.StdEncoding.EncodeToString([]byte("mysupersecretpass"))),
+		StringData: map[string]string{
+			"pass": "mysupersecretpass",
 		},
 	}
 

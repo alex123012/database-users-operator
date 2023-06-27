@@ -108,7 +108,7 @@ func (r *DatabaseBindingReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		}
 	}
 
-	logger.Info("Successfully created users")
+	logger.Info("Successfully created user")
 	dbBinding.Status.Summary = v1alpha1.StatusSummary{
 		Ready:   true,
 		Message: "",
@@ -211,6 +211,8 @@ func (r *DatabaseBindingReconciler) userPassword(ctx context.Context, user *v1al
 func (r *DatabaseBindingReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.DatabaseBinding{}).
+		Owns(&v1alpha1.Database{}).
+		Owns(&v1alpha1.User{}).
 		Complete(r)
 }
 
