@@ -22,7 +22,7 @@ var _ = Describe("PostgreSQL", Ordered, func() {
 
 	BeforeAll(func() {
 		var err error
-		postgresInstance, err = decodeYamlFileWithNamespace("../../docs/examples/postgresql/postgres-sts.yaml", namespace)
+		postgresInstance, err = decodeYamlFileWithNamespace("../../docs/examples/postgresql/01-statefulset.yaml", namespace)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(createObjects(ctx, postgresInstance...)).To(Succeed())
 

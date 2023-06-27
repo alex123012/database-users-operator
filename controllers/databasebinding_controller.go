@@ -95,6 +95,10 @@ func (r *DatabaseBindingReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, r.Update(ctx, dbBinding)
 	}
 
+	if err := r.createUserInDatabase(ctx, dbBinding, user, dbConfig, logger); err != nil {
+		return ctrl.Result{}, err
+	}
+
 	if !controllerutil.ContainsFinalizer(dbBinding, dbBindingFinalizer) {
 		// Add finalizer for this CR
 		logger.Info("Setting finalizer for resource")
@@ -102,10 +106,6 @@ func (r *DatabaseBindingReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		if err := r.Update(ctx, dbBinding); err != nil {
 			return ctrl.Result{}, err
 		}
-	}
-
-	if err := r.createUserInDatabase(ctx, dbBinding, user, dbConfig, logger); err != nil {
-		return ctrl.Result{}, err
 	}
 
 	logger.Info("Successfully created users")

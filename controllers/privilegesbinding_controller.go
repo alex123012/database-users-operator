@@ -94,17 +94,17 @@ func (r *PrivilegesBindingReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return ctrl.Result{}, r.Update(ctx, privBinding)
 	}
 
+	for _, dbBinding := range dbBindings {
+		if err := r.applyPrivileges(ctx, privBinding, dbBinding, privileges.Privileges, logger); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
 	if !controllerutil.ContainsFinalizer(privBinding, privBindingFinalizer) {
 		// Add finalizer for this CR
 		logger.Info("Setting finalizer for resource")
 		controllerutil.AddFinalizer(privBinding, privBindingFinalizer)
 		if err := r.Update(ctx, privBinding); err != nil {
-			return ctrl.Result{}, err
-		}
-	}
-
-	for _, dbBinding := range dbBindings {
-		if err := r.applyPrivileges(ctx, privBinding, dbBinding, privileges.Privileges, logger); err != nil {
 			return ctrl.Result{}, err
 		}
 	}
