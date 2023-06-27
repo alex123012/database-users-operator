@@ -1,0 +1,111 @@
+---
+# PostgreSQL StatefulSet
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgresql-db
+  namespace: test-database-users-operator
+spec:
+  serviceName: postgres
+  selector:
+    matchLabels:
+      app: postgresql-db
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: postgresql-db
+    spec:
+      containers:
+        - name: postgresql-db
+          image: postgres:15
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres
+                  key: password
+            - name: POSTGRES_USER
+              value: postgres
+            - name: PGDATA
+              value: /data/pgdata
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: prepare-example
+  namespace: test-database-users-operator
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: init
+        image: postgres:15.3
+        command: ['/bin/bash']
+        args:
+          - '/opt/001_create_databases.sh'
+        env:
+        - name: PGHOST
+          value: postgres
+        - name: PGPORT
+          value: "5432"
+        - name: PGPASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres
+              key: password
+        - name: POSTGRES_USER
+          value: postgres
+        volumeMounts:
+        - name: init
+          mountPath: /opt/001_create_databases.sh
+          subPath: 001_create_databases.sh
+      volumes:
+      - name: init
+        configMap:
+          name: prepare-example-script
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prepare-example-script
+  namespace: test-database-users-operator
+data:
+  001_create_databases.sh: |
+    #!/bin/bash
+    # set -ex
+
+    while ! psql -U ${POSTGRES_USER} -q -d postgres -c "SELECT 1"; do
+      sleep 1
+      echo waiting postgres
+    done
+
+    psql_conn_str="psql -U postgres"
+    $psql_conn_str -c "CREATE ROLE some_role;"
+    $psql_conn_str -c "CREATE DATABASE some_db;"
+    $psql_conn_str -d some_db -c "CREATE TABLE some_table (
+        code int
+    );"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: test-database-users-operator
+spec:
+  selector:
+    app: postgresql-db
+  ports:
+    - port: 5432
+      targetPort: 5432
+---
+kind: Secret
+type: Opaque
+apiVersion: v1
+metadata:
+  name: postgres
+  namespace: test-database-users-operator
+stringData:
+  password: testpassword

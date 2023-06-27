@@ -1,0 +1,18 @@
+---
+apiVersion: databaseusersoperator.com/v1alpha1
+kind: Database
+metadata:
+  name: postgres
+  namespace: test-database-users-operator
+spec:
+  databaseType: PostgreSQL
+  postgreSQL:
+    host: postgres.test-database-users-operator.svc.cluster.local
+    port: 5432
+    user: postgres
+    sslMode: disable
+    passwordSecret:
+      key: password
+      secret:
+        name: postgres
+        namespace: test-database-users-operator

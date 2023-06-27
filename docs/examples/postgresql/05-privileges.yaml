@@ -1,0 +1,13 @@
+---
+apiVersion: databaseusersoperator.com/v1alpha1
+kind: Privileges
+metadata:
+  name: some-privileges
+  namespace: test-database-users-operator
+privileges:
+  - database: some_db
+    "on": some_table
+    privilege: ALL PRIVILEGES
+  - database: postgres
+    privilege: CONNECT
+  - privilege: some_role
