@@ -14,10 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package postgresql_test
+package testsutils
 
 const (
-	sslCAKey = `
+	SSLCAKey = `
 -----BEGIN RSA PRIVATE KEY-----
 MIIEowIBAAKCAQEA6PqSDsm1ohRJ9fFF+wbLSIC/NnmY7R5Cg2DgSUP9HK4cWeN9
 n9QSWoXwTZS5TKjuPBGYEnh91xbiEo2DcFGD+DF6x6Lf1N7Lh2LIV+MVlcD1KkId
@@ -47,7 +47,7 @@ fQKcnTU/S4jGtSfPLUePvdaK5+ezCyepCXO18mZ7TSemGZVyroBy
 -----END RSA PRIVATE KEY-----
 `
 
-	sslCACert = `
+	SSLCACert = `
 -----BEGIN CERTIFICATE-----
 MIIDrjCCApYCCQDu7SVJupOI5DANBgkqhkiG9w0BAQsFADCBlzELMAkGA1UEBhMC
 R0UxDDAKBgNVBAgMA1VsbTEMMAoGA1UEBwwDVWxtMQ4wDAYDVQQKDAVGbGFudDEQ
@@ -72,7 +72,7 @@ cvd2vcFJnLalUzjlWlMdNhGbcamwtehiUumwwFhX3gGz0Q==
 -----END CERTIFICATE-----
 `
 
-	sslJohnCert = `
+	SSLJohnCert = `
 -----BEGIN CERTIFICATE-----
 MIIDbTCCAlWgAwIBAgIRAJP0yfwGwnS6+IPOEyG0MlQwDQYJKoZIhvcNAQELBQAw
 gZcxCzAJBgNVBAYTAkdFMQwwCgYDVQQIDANVbG0xDDAKBgNVBAcMA1VsbTEOMAwG
@@ -96,7 +96,7 @@ QqO8Dwo4cNBvpWIyKCAcTvQ=
 -----END CERTIFICATE-----
 `
 
-	sslJohnKey = `
+	SSLJohnKey = `
 -----BEGIN RSA PRIVATE KEY-----
 MIIEpAIBAAKCAQEAnJcQWasALHeSiY5PdrKiF34tuS+8svhHd/BuwQ5/Et/nYhNb
 earEtKbC9aVTDYl5NX1Wy/NoTTVOvhPvR7NX7KJ2dYuvtY6EEpZB2XK18KuaEjq6

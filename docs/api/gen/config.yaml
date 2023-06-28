@@ -1,6 +1,6 @@
 processor:
   ignoreTypes:
-    - "(Database|User|DatabaseBinding|Privileges|PrivilegesBinding)List$"
+    - "(Database|User|Privileges)List$"
   ignoreFields:
     - "status$"
     - "TypeMeta$"

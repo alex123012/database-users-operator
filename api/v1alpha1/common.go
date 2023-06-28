@@ -16,10 +16,13 @@ limitations under the License.
 
 package v1alpha1
 
+import "k8s.io/apimachinery/pkg/types"
+
 // Secret is a reference for kubernetes secret.
 type Secret struct {
 	// Secret is secret name and namespace
 	Secret NamespacedName `json:"secret"`
+
 	// Kubernetes secret key with data
 	Key string `json:"key"`
 }
@@ -30,6 +33,21 @@ type NamespacedName struct {
 
 	// resource name
 	Name string `json:"name"`
+}
+
+func (n NamespacedName) ToNamespacedName() types.NamespacedName {
+	return types.NamespacedName(n)
+}
+
+type Name struct {
+	// resource name
+	Name string `json:"name"`
+}
+
+func (n Name) ToNamespacedName() types.NamespacedName {
+	return types.NamespacedName{
+		Name: n.Name,
+	}
 }
 
 type StatusSummary struct {

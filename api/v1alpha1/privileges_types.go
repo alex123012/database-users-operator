@@ -36,6 +36,7 @@ type PrivilegeSpec struct {
 }
 
 //+kubebuilder:object:root=true
+//+kubebuilder:resource:scope=Cluster
 
 // Privileges is the Schema for the privileges API.
 type Privileges struct {

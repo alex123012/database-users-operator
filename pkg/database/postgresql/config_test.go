@@ -25,6 +25,7 @@ import (
 
 	"github.com/alex123012/database-users-operator/api/v1alpha1"
 	"github.com/alex123012/database-users-operator/pkg/database/postgresql"
+	testsutils "github.com/alex123012/database-users-operator/pkg/utils/tests_utils"
 )
 
 func TestConfig_ConnString(t *testing.T) {
@@ -56,7 +57,7 @@ func TestConfig_ConnString(t *testing.T) {
 	}{
 		{
 			name:                   "SSL config",
-			want:                   fmt.Sprintf("host=postgres user=user port=5432 sslmode=verify-full dbname=dbname password=password sslrootcert=%s/postgres-certs/postgres/dbname_user.ca sslcert=%s/postgres-certs/postgres/dbname_user.crt sslkey=%s/postgres-certs/postgres/dbname_user.key", home, home, home),
+			want:                   fmt.Sprintf("host=postgres user=user port=5432 dbname=dbname password=password sslmode=verify-full sslrootcert=%s/postgres-certs/postgres/dbname_user.ca sslcert=%s/postgres-certs/postgres/dbname_user.crt sslkey=%s/postgres-certs/postgres/dbname_user.key", home, home, home),
 			wantCreateCertificates: true,
 			args: args{
 				deleteFilesSigChan: make(chan struct{}),
@@ -68,9 +69,9 @@ func TestConfig_ConnString(t *testing.T) {
 				DatabaseName: "dbname",
 				Port:         5432,
 				SSLMode:      "verify-full",
-				SSLCACert:    sslCACert,
-				SSLUserCert:  sslJohnCert,
-				SSLUserKey:   sslJohnKey,
+				SSLCACert:    testsutils.SSLCACert,
+				SSLUserCert:  testsutils.SSLJohnCert,
+				SSLUserKey:   testsutils.SSLJohnKey,
 			},
 		},
 	}

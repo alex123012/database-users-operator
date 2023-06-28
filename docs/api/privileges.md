@@ -1,3 +1,4 @@
+```yaml
 ---
 apiVersion: databaseusersoperator.com/v1alpha1
 kind: Privileges
@@ -11,3 +12,4 @@ privileges:
   - database: postgres
     privilege: CONNECT
   - privilege: some_role
+```

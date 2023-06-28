@@ -14,20 +14,44 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// +kubebuilder:validation:Required
 package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// UserSpec defines the desired state of User.
+type UserSpec struct {
+	Databases []DatabaseRef `json:"databases"`
+}
+
+type DatabaseRef struct {
+	Name string `json:"name"`
+
+	PasswordSecret Secret `json:"passwordSecret,omitempty"`
+
+	CreatedSecret NamespacedName `json:"createdSecret,omitempty"`
+
+	Privileges []Name `json:"privileges"`
+}
+
+// UserStatus defines the observed state of User.
+type UserStatus struct {
+	Summary StatusSummary `json:"summary,omitempty"`
+}
+
 //+kubebuilder:object:root=true
+//+kubebuilder:subresource:status
+//+kubebuilder:resource:scope=Cluster
 
 // User is the Schema for the users API.
 type User struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	PasswordSecret Secret `json:"passwordSecret,omitempty"`
+	Spec   UserSpec   `json:"spec,omitempty"`
+	Status UserStatus `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true

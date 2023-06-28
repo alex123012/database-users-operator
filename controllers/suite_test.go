@@ -48,9 +48,8 @@ var (
 	ctx       context.Context
 	cancel    context.CancelFunc
 
-	fakeDBCreatorDB         = database.NewFakeDatabase()
-	fakeDBCreatorPrivileges = database.NewFakeDatabase()
-	namespace               = "default"
+	fakeDB    = database.NewFakeDatabase()
+	namespace = "default"
 )
 
 func TestAPIs(t *testing.T) {
@@ -77,7 +76,8 @@ var _ = BeforeSuite(func() {
 	Expect(cfg).NotTo(BeNil())
 
 	Expect(scheme.AddToScheme(scheme.Scheme)).To(Succeed())
-	Expect(databaseusersoperatorcomv1alpha1.AddToScheme(scheme.Scheme)).To(Succeed())
+	err = databaseusersoperatorcomv1alpha1.AddToScheme(scheme.Scheme)
+	Expect(err).NotTo(HaveOccurred())
 
 	//+kubebuilder:scaffold:scheme
 
@@ -87,16 +87,10 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	Expect((&controllers.DatabaseBindingReconciler{
+	Expect((&controllers.UserReconciler{
 		Client:          mgr.GetClient(),
 		Scheme:          mgr.GetScheme(),
-		DatabaseCreator: fakeDBCreatorDB.DatabaseCreatorFunc(),
-	}).SetupWithManager(mgr)).To(Succeed())
-
-	Expect((&controllers.PrivilegesBindingReconciler{
-		Client:          mgr.GetClient(),
-		Scheme:          mgr.GetScheme(),
-		DatabaseCreator: fakeDBCreatorPrivileges.DatabaseCreatorFunc(),
+		DatabaseCreator: fakeDB.DatabaseCreatorFunc(),
 	}).SetupWithManager(mgr)).To(Succeed())
 
 	go func() {

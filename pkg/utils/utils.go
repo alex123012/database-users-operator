@@ -11,8 +11,8 @@ import (
 )
 
 func DecodeSecretData(ctx context.Context, nn types.NamespacedName, client client.Client) (map[string]string, error) {
-	secret := &v1.Secret{}
-	if err := client.Get(ctx, nn, secret); err != nil {
+	secret, err := Secret(ctx, nn, client)
+	if err != nil {
 		return nil, err
 	}
 
@@ -22,6 +22,12 @@ func DecodeSecretData(ctx context.Context, nn types.NamespacedName, client clien
 	}
 
 	return data, nil
+}
+
+func Secret(ctx context.Context, nn types.NamespacedName, client client.Client) (*v1.Secret, error) {
+	secret := &v1.Secret{}
+	err := client.Get(ctx, nn, secret)
+	return secret, err
 }
 
 func PathFromHome(paths ...string) string {

@@ -20,32 +20,6 @@ rules:
 - apiGroups:
   - databaseusersoperator.com
   resources:
-  - databasebindings
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - databaseusersoperator.com
-  resources:
-  - databasebindings/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - databaseusersoperator.com
-  resources:
-  - databasebindings/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - databaseusersoperator.com
-  resources:
   - databases
   verbs:
   - get
@@ -62,34 +36,26 @@ rules:
 - apiGroups:
   - databaseusersoperator.com
   resources:
-  - privilegesbindings
-  verbs:
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - databaseusersoperator.com
-  resources:
-  - privilegesbindings/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - databaseusersoperator.com
-  resources:
-  - privilegesbindings/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - databaseusersoperator.com
-  resources:
   - users
   verbs:
+  - create
+  - delete
   - get
   - list
   - patch
   - update
   - watch
+- apiGroups:
+  - databaseusersoperator.com
+  resources:
+  - users/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - databaseusersoperator.com
+  resources:
+  - users/status
+  verbs:
+  - get
+  - patch
+  - update

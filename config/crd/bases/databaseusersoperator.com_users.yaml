@@ -13,7 +13,7 @@ spec:
     listKind: UserList
     plural: users
     singular: user
-  scope: Namespaced
+  scope: Cluster
   versions:
   - name: v1alpha1
     schema:
@@ -32,29 +32,82 @@ spec:
             type: string
           metadata:
             type: object
-          passwordSecret:
-            description: Secret is a reference for kubernetes secret.
+          spec:
+            description: UserSpec defines the desired state of User.
             properties:
-              key:
-                description: Kubernetes secret key with data
-                type: string
-              secret:
-                description: Secret is secret name and namespace
-                properties:
-                  name:
-                    description: resource name
-                    type: string
-                  namespace:
-                    description: resource namespace
-                    type: string
-                required:
-                - name
-                - namespace
-                type: object
+              databases:
+                items:
+                  properties:
+                    createdSecret:
+                      properties:
+                        name:
+                          description: resource name
+                          type: string
+                        namespace:
+                          description: resource namespace
+                          type: string
+                      required:
+                      - name
+                      - namespace
+                      type: object
+                    name:
+                      type: string
+                    passwordSecret:
+                      description: Secret is a reference for kubernetes secret.
+                      properties:
+                        key:
+                          description: Kubernetes secret key with data
+                          type: string
+                        secret:
+                          description: Secret is secret name and namespace
+                          properties:
+                            name:
+                              description: resource name
+                              type: string
+                            namespace:
+                              description: resource namespace
+                              type: string
+                          required:
+                          - name
+                          - namespace
+                          type: object
+                      required:
+                      - key
+                      - secret
+                      type: object
+                    privileges:
+                      items:
+                        properties:
+                          name:
+                            description: resource name
+                            type: string
+                        required:
+                        - name
+                        type: object
+                      type: array
+                  required:
+                  - name
+                  - privileges
+                  type: object
+                type: array
             required:
-            - key
-            - secret
+            - databases
+            type: object
+          status:
+            description: UserStatus defines the observed state of User.
+            properties:
+              summary:
+                properties:
+                  message:
+                    type: string
+                  ready:
+                    type: boolean
+                required:
+                - ready
+                type: object
             type: object
         type: object
     served: true
     storage: true
+    subresources:
+      status: {}

@@ -43,10 +43,8 @@ It will install **database-users-operator** into `database-users-operator-system
 ## Operator installation process
 ```text
 namespace/database-users-operator-system created
-customresourcedefinition.apiextensions.k8s.io/databasebindings.databaseusersoperator.com created
 customresourcedefinition.apiextensions.k8s.io/databases.databaseusersoperator.com created
 customresourcedefinition.apiextensions.k8s.io/privileges.databaseusersoperator.com created
-customresourcedefinition.apiextensions.k8s.io/privilegesbindings.databaseusersoperator.com created
 customresourcedefinition.apiextensions.k8s.io/users.databaseusersoperator.com created
 serviceaccount/database-users-operator-controller-manager created
 role.rbac.authorization.k8s.io/database-users-operator-leader-election-role created
@@ -69,9 +67,9 @@ kubectl get pods -n database-users-operator-system
 NAME                                                          READY   STATUS    RESTARTS   AGE
 database-users-operator-controller-manager-777dcc4765-nb76m   1/1     Running   0          36s
 ```
-# Examples
+# Documentation
 
-There are several ready-to-use [examples](docs/examples).
+Review [docs/](docs/) folder for more information.
 
 # Development
 
@@ -123,7 +121,8 @@ make undeploy
 ```
 
 # Contributing
-// TODO(user): Add detailed information on how you would like others to contribute to this project
+
+Create issue or PR and tag `@alex123012`.
 
 ## How it works
 This project aims to follow the Kubernetes [Operator pattern](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/)
@@ -167,12 +166,9 @@ for key in $(kubectl get secrets ${secret_name} -oyaml | yq '.data | keys | .[]'
 ```
 
 # TODO
-- [x] Auto remove user from all dbs listed in databaseConfig when User CR deleted
-- [x] Add webhook validation for config and user CR
-- [ ] Fix CockroachDB database privileges
-- [ ] Create events for user CR
-- [ ] Create status updates for user CR
-- [ ] Auto delete user from DB on databaseConfig entry remove from User CR
-- [ ] Check compability with different postgres versions (only checked with PostgreSQL 15 and CockroachDB 22.1.9)
-- [ ] Add MySQL support
-- [ ] Add prometheus metrics and alerts
+- [ ] Add E2E tests.
+- [ ] Create status updates for user CR.
+- [ ] Add webhook validation for config and user CR.
+- [ ] Create events for user CR.
+- [ ] Auto delete user from DB on `database` entry remove from User CR.
+- [ ] Add prometheus metrics and alerts.

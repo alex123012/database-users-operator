@@ -29,6 +29,7 @@ import (
 	"github.com/alex123012/database-users-operator/api/v1alpha1"
 	"github.com/alex123012/database-users-operator/pkg/database/connection"
 	"github.com/alex123012/database-users-operator/pkg/database/postgresql"
+	testsutils "github.com/alex123012/database-users-operator/pkg/utils/tests_utils"
 )
 
 func TestPostgresql(t *testing.T) {
@@ -90,7 +91,7 @@ func TestPostgresql(t *testing.T) {
 		{
 			name: "Create user with password, apply privileges, revoke privileges, delete user",
 			fields: fields{
-				config: postgresql.NewConfig("postgres", 5432, "user", "password", "dbname", "verify-full", sslCACert, sslJohnCert, sslJohnKey, sslCAKey),
+				config: postgresql.NewConfig("postgres", 5432, "user", "password", "dbname", "verify-full", testsutils.SSLCACert, testsutils.SSLJohnCert, testsutils.SSLJohnKey, testsutils.SSLCAKey),
 				logger: logr.Discard(),
 			},
 			args: args{
@@ -121,7 +122,7 @@ func TestPostgresql(t *testing.T) {
 		},
 	}
 
-	if err := checkCertsValidity(map[string]string{"ca.crt": sslCACert, "tls.crt": invalidSSLCert}); err == nil {
+	if err := checkCertsValidity(map[string]string{"ca.crt": testsutils.SSLCACert, "tls.crt": invalidSSLCert}); err == nil {
 		t.Error("Invalid func for checking certs validity")
 	}
 
@@ -176,10 +177,10 @@ func TestPostgresql(t *testing.T) {
 }
 
 func checkCertsValidity(data map[string]string) error {
-	if data["ca.crt"] != sslCACert {
+	if data["ca.crt"] != testsutils.SSLCACert {
 		return errors.New("CA cert doen't match expencted CA cert")
 	}
-	return verifyCert(sslCACert, data["tls.crt"])
+	return verifyCert(testsutils.SSLCACert, data["tls.crt"])
 }
 
 func verifyCert(caCertData, clientCertData string) error {

@@ -88,20 +88,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controllers.PrivilegesBindingReconciler{
+	if err = (&controllers.UserReconciler{
 		Client:          mgr.GetClient(),
 		Scheme:          mgr.GetScheme(),
 		DatabaseCreator: database.NewDatabase,
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "PrivilegesBinding")
-		os.Exit(1)
-	}
-	if err = (&controllers.DatabaseBindingReconciler{
-		Client:          mgr.GetClient(),
-		Scheme:          mgr.GetScheme(),
-		DatabaseCreator: database.NewDatabase,
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "DatabaseBinding")
+		setupLog.Error(err, "unable to create controller", "controller", "User")
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder
