@@ -17,87 +17,6 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.11.1
   creationTimestamp: null
-  name: databasebindings.databaseusersoperator.com
-spec:
-  group: databaseusersoperator.com
-  names:
-    kind: DatabaseBinding
-    listKind: DatabaseBindingList
-    plural: databasebindings
-    singular: databasebinding
-  scope: Namespaced
-  versions:
-  - name: v1alpha1
-    schema:
-      openAPIV3Schema:
-        description: DatabaseBinding is the Schema for the databasebindings API.
-        properties:
-          apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
-            type: string
-          kind:
-            description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
-            type: string
-          metadata:
-            type: object
-          spec:
-            description: DatabaseBindingSpec defines the desired state of DatabaseBinding.
-            properties:
-              database:
-                description: Database references to the Database that will be used to connect to DB
-                properties:
-                  name:
-                    description: resource name
-                    type: string
-                  namespace:
-                    description: resource namespace
-                    type: string
-                required:
-                - name
-                - namespace
-                type: object
-              user:
-                description: Users holds references to the objects the privileges applies to.
-                properties:
-                  name:
-                    description: resource name
-                    type: string
-                  namespace:
-                    description: resource namespace
-                    type: string
-                required:
-                - name
-                - namespace
-                type: object
-            required:
-            - database
-            - user
-            type: object
-          status:
-            description: DatabaseBindingStatus defines the observed state of DatabaseBinding.
-            properties:
-              summary:
-                properties:
-                  message:
-                    type: string
-                  ready:
-                    type: boolean
-                required:
-                - ready
-                type: object
-            type: object
-        type: object
-    served: true
-    storage: true
-    subresources:
-      status: {}
----
-apiVersion: apiextensions.k8s.io/v1
-kind: CustomResourceDefinition
-metadata:
-  annotations:
-    controller-gen.kubebuilder.io/version: v0.11.1
-  creationTimestamp: null
   name: databases.databaseusersoperator.com
 spec:
   group: databaseusersoperator.com
@@ -278,7 +197,7 @@ spec:
     listKind: PrivilegesList
     plural: privileges
     singular: privileges
-  scope: Namespaced
+  scope: Cluster
   versions:
   - name: v1alpha1
     schema:
@@ -320,20 +239,20 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.11.1
   creationTimestamp: null
-  name: privilegesbindings.databaseusersoperator.com
+  name: users.databaseusersoperator.com
 spec:
   group: databaseusersoperator.com
   names:
-    kind: PrivilegesBinding
-    listKind: PrivilegesBindingList
-    plural: privilegesbindings
-    singular: privilegesbinding
-  scope: Namespaced
+    kind: User
+    listKind: UserList
+    plural: users
+    singular: user
+  scope: Cluster
   versions:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: PrivilegesBinding is the Schema for the privilegesbindings API.
+        description: User is the Schema for the users API.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
@@ -344,42 +263,68 @@ spec:
           metadata:
             type: object
           spec:
-            description: PrivilegesBindingSpec defines the desired state of PrivilegesBinding.
+            description: UserSpec defines the desired state of User.
             properties:
-              databaseBindings:
-                description: DatabaseBinding references to the DatabaseBinding that will be used to apply privileges to user in a particular database
+              databases:
                 items:
                   properties:
+                    createdSecret:
+                      properties:
+                        name:
+                          description: resource name
+                          type: string
+                        namespace:
+                          description: resource namespace
+                          type: string
+                      required:
+                      - name
+                      - namespace
+                      type: object
                     name:
-                      description: resource name
                       type: string
-                    namespace:
-                      description: resource namespace
-                      type: string
+                    passwordSecret:
+                      description: Secret is a reference for kubernetes secret.
+                      properties:
+                        key:
+                          description: Kubernetes secret key with data
+                          type: string
+                        secret:
+                          description: Secret is secret name and namespace
+                          properties:
+                            name:
+                              description: resource name
+                              type: string
+                            namespace:
+                              description: resource namespace
+                              type: string
+                          required:
+                          - name
+                          - namespace
+                          type: object
+                      required:
+                      - key
+                      - secret
+                      type: object
+                    privileges:
+                      items:
+                        properties:
+                          name:
+                            description: resource name
+                            type: string
+                        required:
+                        - name
+                        type: object
+                      type: array
                   required:
                   - name
-                  - namespace
+                  - privileges
                   type: object
                 type: array
-              privileges:
-                description: List of database privileges that will be applied to user. If user already exists in database - all it privileges will be synchronized with this list (all privileges that are not defined will be revoked).
-                properties:
-                  name:
-                    description: resource name
-                    type: string
-                  namespace:
-                    description: resource namespace
-                    type: string
-                required:
-                - name
-                - namespace
-                type: object
             required:
-            - databaseBindings
-            - privileges
+            - databases
             type: object
           status:
-            description: PrivilegesBindingStatus defines the observed state of PrivilegesBinding.
+            description: UserStatus defines the observed state of User.
             properties:
               summary:
                 properties:
@@ -396,62 +341,6 @@ spec:
     storage: true
     subresources:
       status: {}
----
-apiVersion: apiextensions.k8s.io/v1
-kind: CustomResourceDefinition
-metadata:
-  annotations:
-    controller-gen.kubebuilder.io/version: v0.11.1
-  creationTimestamp: null
-  name: users.databaseusersoperator.com
-spec:
-  group: databaseusersoperator.com
-  names:
-    kind: User
-    listKind: UserList
-    plural: users
-    singular: user
-  scope: Namespaced
-  versions:
-  - name: v1alpha1
-    schema:
-      openAPIV3Schema:
-        description: User is the Schema for the users API.
-        properties:
-          apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
-            type: string
-          kind:
-            description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
-            type: string
-          metadata:
-            type: object
-          passwordSecret:
-            description: Secret is a reference for kubernetes secret.
-            properties:
-              key:
-                description: Kubernetes secret key with data
-                type: string
-              secret:
-                description: Secret is secret name and namespace
-                properties:
-                  name:
-                    description: resource name
-                    type: string
-                  namespace:
-                    description: resource namespace
-                    type: string
-                required:
-                - name
-                - namespace
-                type: object
-            required:
-            - key
-            - secret
-            type: object
-        type: object
-    served: true
-    storage: true
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -532,32 +421,6 @@ rules:
 - apiGroups:
   - databaseusersoperator.com
   resources:
-  - databasebindings
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - databaseusersoperator.com
-  resources:
-  - databasebindings/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - databaseusersoperator.com
-  resources:
-  - databasebindings/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - databaseusersoperator.com
-  resources:
   - databases
   verbs:
   - get
@@ -574,37 +437,29 @@ rules:
 - apiGroups:
   - databaseusersoperator.com
   resources:
-  - privilegesbindings
-  verbs:
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - databaseusersoperator.com
-  resources:
-  - privilegesbindings/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - databaseusersoperator.com
-  resources:
-  - privilegesbindings/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - databaseusersoperator.com
-  resources:
   - users
   verbs:
+  - create
+  - delete
   - get
   - list
   - patch
   - update
   - watch
+- apiGroups:
+  - databaseusersoperator.com
+  resources:
+  - users/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - databaseusersoperator.com
+  resources:
+  - users/status
+  verbs:
+  - get
+  - patch
+  - update
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -830,5 +685,7 @@ spec:
             - ALL
       securityContext:
         runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       serviceAccountName: database-users-operator-controller-manager
       terminationGracePeriodSeconds: 10

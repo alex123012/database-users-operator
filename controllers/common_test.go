@@ -31,6 +31,7 @@ import (
 
 	"github.com/alex123012/database-users-operator/api/v1alpha1"
 	"github.com/alex123012/database-users-operator/pkg/database"
+	"github.com/alex123012/database-users-operator/pkg/utils"
 )
 
 const (
@@ -69,40 +70,37 @@ func defaultMysqlConfig() v1alpha1.MySQLConfig {
 }
 
 type testDatabase struct {
-	namespace         string
 	dbType            v1alpha1.DatabaseType
 	dbConfig          interface{}
 	fakeDB            *database.FakeDatabase
 	connectionStrings []string
 	queries           []string
 	removeQueries     []string
+	creteUserSecret   bool
 }
 
-func newTestDatabase(namespace string, dbType v1alpha1.DatabaseType, dbConfig interface{}, fakeDB *database.FakeDatabase, connStrings, queries, removeQueries []string) testDatabase {
+func newTestDatabase(dbType v1alpha1.DatabaseType, dbConfig interface{}, fakeDB *database.FakeDatabase, connStrings, queries, removeQueries []string, creteUserSecret bool) testDatabase {
 	return testDatabase{
-		namespace:         namespace,
 		dbType:            dbType,
 		dbConfig:          dbConfig,
 		fakeDB:            fakeDB,
 		connectionStrings: connStrings,
 		queries:           queries,
 		removeQueries:     removeQueries,
+		creteUserSecret:   creteUserSecret,
 	}
 }
 
-func (t testDatabase) run() {
+func (t testDatabase) run(additionalObjects ...client.Object) {
 	var (
-		user              *v1alpha1.User
-		secret            *v1.Secret
-		database          *v1alpha1.Database
-		databaseBinding   *v1alpha1.DatabaseBinding
-		privileges        *v1alpha1.Privileges
-		privilegesBinding *v1alpha1.PrivilegesBinding
+		user       *v1alpha1.User
+		secret     *v1.Secret
+		database   *v1alpha1.Database
+		privileges *v1alpha1.Privileges
 	)
 
 	BeforeEach(func() {
-		t.fakeDB.Conn.ResetDB()
-		user, secret, database, databaseBinding, privileges, privilegesBinding = bundle(t.namespace, t.dbType)
+		user, secret, database, privileges = bundle(namespace, t.dbType)
 		switch t.dbType {
 		case v1alpha1.PostgreSQL:
 			database.Spec.PostgreSQL = t.dbConfig.(v1alpha1.PostgreSQLConfig)
@@ -112,92 +110,108 @@ func (t testDatabase) run() {
 			Expect(t.dbType).To(Equal("not supported db"))
 		}
 
-		createObjects(user, secret, database, databaseBinding, privileges, privilegesBinding)
-		waitForDatabaseBindingReady(databaseBinding)
-		waitForPrivilegesBindingReady(privilegesBinding)
+		createObjects(additionalObjects...)
+
+		t.fakeDB.Conn.ResetDB()
+		createObjects(secret, database, privileges, user)
+		waitForUsersReadiness(user)
 	})
 
 	AfterEach(func() {
 		t.fakeDB.Conn.ResetDB()
-		resetCLuster(t.fakeDB, privilegesBinding, databaseBinding, user, secret, database, privileges)
-		f := checkQueries(t.fakeDB, t.removeQueries)
-		f()
+		deleteObjects(user, secret, database, privileges)
+		deleteObjects(additionalObjects...)
+
+		time.Sleep(userCreationTimeout)
+		checkQueries(t.fakeDB, t.removeQueries)
+
+		By("Deleted users secret", func() {
+			if !t.creteUserSecret {
+				return
+			}
+
+			_, err := utils.Secret(ctx, types.NamespacedName{Namespace: namespace, Name: uniqueName("created-secret", t.dbType)}, k8sClient)
+			Expect(err).To(HaveOccurred())
+		})
 	})
 
 	It("works", func() {
-		By("Connection strings", checkConnectionStrings(t.fakeDB, t.connectionStrings))
+		checkConnectionStrings(fakeDB, t.connectionStrings)
 
-		By("Executed queries", checkQueries(t.fakeDB, t.queries))
+		checkQueries(fakeDB, t.queries)
+
+		By("Created users secret", func() {
+			if !t.creteUserSecret {
+				return
+			}
+			_, err := utils.Secret(ctx, types.NamespacedName{Namespace: namespace, Name: uniqueName("created-secret", t.dbType)}, k8sClient)
+			Expect(err).ToNot(HaveOccurred())
+		})
 	})
 }
 
-func checkConnectionStrings(fakeDB *database.FakeDatabase, expected []string) func() {
-	return func() {
-		connections := fakeDB.Conn.Connections()
+func checkConnectionStrings(fakeDB *database.FakeDatabase, expected []string) {
+	connections := fakeDB.Conn.Connections()
+
+	By("connection strings len", func() {
 		Expect(connections).To(HaveLen(len(expected)))
-		for _, connString := range expected {
+	})
+
+	for _, connString := range expected {
+		By("Connection string: "+connString, func() {
 			Expect(connections[connString]).To(BeTrue())
-		}
+		})
 	}
 }
 
-func checkQueries(fakeDB *database.FakeDatabase, expected []string) func() {
-	return func() {
-		queries := fakeDB.Conn.Queries()
+func checkQueries(fakeDB *database.FakeDatabase, expected []string) {
+	queries := fakeDB.Conn.Queries()
+	fmt.Println(queries)
+	By("Executed queries len", func() {
 		Expect(queries).To(HaveLen(len(expected)))
-		for _, query := range expected {
-			Expect(queries[query]).NotTo(Equal(0))
-		}
+	})
+
+	var previousQueryOrder int
+	for _, query := range expected {
+		currentQueryOrder := queries[query]
+		By("Executed query: "+query, func() {
+			Expect(currentQueryOrder).NotTo(Equal(0))
+			Expect(currentQueryOrder).To(BeNumerically(">", previousQueryOrder))
+			previousQueryOrder = currentQueryOrder
+		})
 	}
 }
 
-func waitForDatabaseBindingReady(databaseBinding *v1alpha1.DatabaseBinding) {
+func waitForUsersReadiness(user *v1alpha1.User) {
 	EventuallyWithOffset(1, func() string {
-		databaseBindingCreated := v1alpha1.DatabaseBinding{}
+		userCreated := v1alpha1.User{}
 		if err := k8sClient.Get(
 			ctx,
-			types.NamespacedName{Name: databaseBinding.Name, Namespace: databaseBinding.Namespace},
-			&databaseBindingCreated,
+			types.NamespacedName{Name: user.Name, Namespace: user.Namespace},
+			&userCreated,
 		); err != nil {
 			return fmt.Sprintf("%v+", err)
 		}
 
-		if !databaseBindingCreated.Status.Summary.Ready {
+		if !userCreated.Status.Summary.Ready {
 			return "not ready"
 		}
-
+		time.Sleep(userCreationTimeout)
 		return "ready"
-	}, databaseBindingCreationTimeout, 1*time.Second).Should(Equal("ready"))
+	}, userCreationTimeout, 1*time.Second).Should(Equal("ready"))
 }
 
-func waitForPrivilegesBindingReady(privilegesBinding *v1alpha1.PrivilegesBinding) {
-	EventuallyWithOffset(1, func() string {
-		privilegesBindingCreated := v1alpha1.PrivilegesBinding{}
-		if err := k8sClient.Get(
-			ctx,
-			types.NamespacedName{Name: privilegesBinding.Name, Namespace: privilegesBinding.Namespace},
-			&privilegesBindingCreated,
-		); err != nil {
-			return fmt.Sprintf("%v+", err)
-		}
-
-		if !privilegesBindingCreated.Status.Summary.Ready {
-			return "not ready"
-		}
-
-		return "ready"
-	}, privilegesBindingCreationTimeout, 1*time.Second).Should(Equal("ready"))
+func objectNotFound(o client.Object) bool {
+	err := k8sClient.Get(ctx, types.NamespacedName{Name: o.GetName(), Namespace: o.GetNamespace()}, o)
+	return apierrors.IsNotFound(err)
 }
 
-func resetCLuster(_ *database.FakeDatabase, objects ...client.Object) {
-	deleteObject := func(o client.Object) bool {
-		err := k8sClient.Get(ctx, types.NamespacedName{Name: o.GetName(), Namespace: o.GetNamespace()}, o)
-		return apierrors.IsNotFound(err)
-	}
-
+func deleteObjects(objects ...client.Object) {
 	for _, o := range objects {
-		Expect(k8sClient.Delete(ctx, o)).To(Succeed())
-		Eventually(deleteObject, 5).WithArguments(o).Should(BeTrue())
+		By(fmt.Sprintf("Deleting %s from namespace %s", o.GetName(), o.GetNamespace()), func() {
+			Expect(k8sClient.Delete(ctx, o)).To(Succeed())
+			Eventually(objectNotFound, 5).WithArguments(o).Should(BeTrue())
+		})
 	}
 }
 
@@ -211,32 +225,55 @@ func uniqueName(s string, dbType v1alpha1.DatabaseType) string {
 	return fmt.Sprintf("%s-%s", s, strings.ToLower(string(dbType)))
 }
 
-func bundle(namespace string, dbType v1alpha1.DatabaseType) (*v1alpha1.User, *v1.Secret, *v1alpha1.Database, *v1alpha1.DatabaseBinding, *v1alpha1.Privileges, *v1alpha1.PrivilegesBinding) {
+func bundle(namespace string, dbType v1alpha1.DatabaseType) (*v1alpha1.User, *v1.Secret, *v1alpha1.Database, *v1alpha1.Privileges) {
 	name := func(s string) string {
 		return uniqueName(s, dbType)
 	}
 
 	database := &v1alpha1.Database{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name("database"),
-			Namespace: namespace,
+			Name: name("database"),
 		},
 		Spec: v1alpha1.DatabaseSpec{
 			Type: dbType,
 		},
 	}
 
+	privileges := &v1alpha1.Privileges{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name("privileges"),
+		},
+		Privileges: []v1alpha1.PrivilegeSpec{
+			{Privilege: "MY PRIVILEGE", On: "CUSTOM ON", Database: "DB"},
+			{Privilege: "MY PRIVILEGE", Database: "DB"},
+			{Privilege: "MY PRIVILEGE"},
+		},
+	}
+
 	user := &v1alpha1.User{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name("user"),
-			Namespace: namespace,
+			Name: name("user"),
 		},
-		PasswordSecret: v1alpha1.Secret{
-			Secret: v1alpha1.NamespacedName{
-				Name:      name("user-password"),
-				Namespace: namespace,
+		Spec: v1alpha1.UserSpec{
+			Databases: []v1alpha1.DatabaseRef{
+				{
+					Name: name("database"),
+					PasswordSecret: v1alpha1.Secret{
+						Key: "pass",
+						Secret: v1alpha1.NamespacedName{
+							Name:      name("user-password"),
+							Namespace: namespace,
+						},
+					},
+					CreatedSecret: v1alpha1.NamespacedName{
+						Name:      name("created-secret"),
+						Namespace: namespace,
+					},
+					Privileges: []v1alpha1.Name{
+						{Name: name("privileges")},
+					},
+				},
 			},
-			Key: "pass",
 		},
 	}
 
@@ -250,53 +287,5 @@ func bundle(namespace string, dbType v1alpha1.DatabaseType) (*v1alpha1.User, *v1
 		},
 	}
 
-	databaseBinding := &v1alpha1.DatabaseBinding{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name("database-binding"),
-			Namespace: namespace,
-		},
-		Spec: v1alpha1.DatabaseBindingSpec{
-			Database: v1alpha1.NamespacedName{
-				Namespace: namespace,
-				Name:      name("database"),
-			},
-			User: v1alpha1.NamespacedName{
-				Namespace: namespace,
-				Name:      name("user"),
-			},
-		},
-	}
-
-	privileges := &v1alpha1.Privileges{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace,
-			Name:      name("privileges"),
-		},
-		Privileges: []v1alpha1.PrivilegeSpec{
-			{Privilege: "MY PRIVILEGE", On: "CUSTOM ON", Database: "DB"},
-			{Privilege: "MY PRIVILEGE", Database: "DB"},
-			{Privilege: "MY PRIVILEGE"},
-		},
-	}
-
-	privilegesBinding := &v1alpha1.PrivilegesBinding{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace,
-			Name:      name("privileges-binding"),
-		},
-		Spec: v1alpha1.PrivilegesBindingSpec{
-			DatabaseBindings: []v1alpha1.NamespacedName{
-				{
-					Namespace: namespace,
-					Name:      name("database-binding"),
-				},
-			},
-			Privileges: v1alpha1.NamespacedName{
-				Namespace: namespace,
-				Name:      name("privileges"),
-			},
-		},
-	}
-
-	return user, secret, database, databaseBinding, privileges, privilegesBinding
+	return user, secret, database, privileges
 }

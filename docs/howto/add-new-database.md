@@ -21,7 +21,7 @@
     > Refer to another dbs defined in this func
 
 6. Write tests for controller.
-    > Refer to PostgreSQL tests for [DatabaseBinding](/controllers/databasebinding_controller_test.go) and [PrivilegesBinding](/controllers/privilegesbinding_controller_test.go)
+    > Refer to PostgreSQL tests for [User controller](/controllers/user_controller_test.go)
 
 7. To run tests use `make test`
 

@@ -4,11 +4,16 @@ kind: User
 metadata:
   name: john
   namespace: test-database-users-operator
-passwordSecret:
-  secret:
-    name: postgres-john
-    namespace: test-database-users-operator
-  key: password
+spec:
+  databases:
+    - name: postgres
+      passwordSecret:
+        key: password
+        secret:
+          name: postgres-john
+          namespace: test-database-users-operator
+      privileges:
+      - name: some-privileges
 ---
 kind: Secret
 type: Opaque

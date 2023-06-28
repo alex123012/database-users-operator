@@ -75,7 +75,7 @@ You are now connected to database "some_db" as user "postgres".
 ```
 
 ```sql
-\du
+\d
 ```
 
 ```text
@@ -86,7 +86,7 @@ You are now connected to database "some_db" as user "postgres".
 (1 row)
 ```
 
-### Deploy `User`, `Database` and `DatabaseBinding`
+### Deploy `Database` and `Privileges`
 
 Exit from postgres pod and create `Database` resource:
 ```bash
@@ -97,82 +97,31 @@ kubectl apply -f https://raw.githubusercontent.com/alex123012/database-users-ope
 database.databaseusersoperator.com/postgres created
 ```
 
-Create `User` resource with name `john` and `Secret` with password for it:
+And `Privileges` resource:
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/alex123012/database-users-operator/main/docs/examples/postgresql/03-user.yaml
-```
-
-```text
-user.databaseusersoperator.com/john created
-secret/postgres-john created
-```
-
-Create `DatabaseBinding` resource with `john` `User` and `postgres` `Database` references. It will "say" operator to create user `john` in previously created PostgreSQL DB:
-
-```bash
-kubectl apply -f https://raw.githubusercontent.com/alex123012/database-users-operator/main/docs/examples/postgresql/04-databasebinding.yaml
-```
-
-```text
-databasebinding.databaseusersoperator.com/postgres-john created
-```
-
-Wait for user creation in database:
-```bash
-while kubectl get databasebindings.databaseusersoperator.com -n test-database-users-operator postgres-john -ojson | jq -e '.status.summary.ready != true' >/dev/null; do echo waiting for ready status of DatabaseBinding; done
-```
-
-Exec in to the postgres pod:
-```bash
-kubectl exec -ti -n test-database-users-operator postgresql-db-0 -- psql --user postgres
-```
-
-```text
-psql (15.3 (Debian 15.3-1.pgdg120+1))
-Type "help" for help.
-```
-
-Check database roles:
-```sql
-\du
-```
-
-```text
-                                   List of roles
- Role name |                         Attributes                         | Member of
------------+------------------------------------------------------------+-----------
- john      |                                                            | {}
- postgres  | Superuser, Create role, Create DB, Replication, Bypass RLS | {}
- some_role | Cannot login
- ```
-
-> The `john` user should be added to the database.
-
-
-### Deploy postgres `Privileges` and `PrivilegesBinding`
-
-Exit from postgres pod and create `Privileges` resource:
-```bash
-kubectl apply -f https://raw.githubusercontent.com/alex123012/database-users-operator/main/docs/examples/postgresql/05-privileges.yaml
+kubectl apply -f https://raw.githubusercontent.com/alex123012/database-users-operator/main/docs/examples/postgresql/03-privileges.yaml
 ```
 
 ```text
 privileges.databaseusersoperator.com/some-privileges created
 ```
 
-Create `PrivilegesBinding` resource with `postgres-john` `DatabaseBinding` and `some-privileges` `Privileges` references. It will "say" operator to assign privileges from `some-privileges` `Privileges` resource to `john` user in previously created PostgreSQL DB:
+### Deploy `User`
+
+Create `User` resource `john` with `postgres` `Database` and `some-privileges` `Privileges` references and `Secret` with password for it. It will "say" operator to create user `john` and assign to it privileges from `some-privileges` `Privileges` resource in previously created PostgreSQL DB:
+
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/alex123012/database-users-operator/main/docs/examples/postgresql/06-privilegesbinding.yaml
+kubectl apply -f https://raw.githubusercontent.com/alex123012/database-users-operator/main/docs/examples/postgresql/04-user.yaml
 ```
 
 ```text
-privilegesbinding.databaseusersoperator.com/some-privileges-postgres-john created
+user.databaseusersoperator.com/john created
+secret/postgres-john configured
 ```
 
-Wait for privileges apply to the user in the PostgreSQL database:
+Wait for user creation in the PostgreSQL database:
 ```bash
-while kubectl get privilegesbindings.databaseusersoperator.com -n test-database-users-operator some-privileges-postgres-john -ojson | jq -e '.status.s
-ummary.ready != true' > /dev/null; do echo waiting for ready status of DatabaseBinding; done
+while kubectl get users.databaseusersoperator.com -n test-database-users-operator john -ojson | jq -e '.status.summary.ready != true' > /dev/null; do echo waiting for ready status of john User; done
 ```
 
 Exec in to the postgres pod with `john` user and to `some_db` database:

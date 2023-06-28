@@ -1,8 +1,10 @@
+```yaml
 ---
 apiVersion: databaseusersoperator.com/v1alpha1
 kind: Database
 metadata:
   name: postgres
+  namespace: test-database-users-operator
 spec:
   databaseType: PostgreSQL
   postgreSQL:
@@ -15,3 +17,4 @@ spec:
       secret:
         name: postgres
         namespace: test-database-users-operator
+```

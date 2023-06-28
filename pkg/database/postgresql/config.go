@@ -61,14 +61,15 @@ func (c *Config) ConnString(deleteFilesSigChan <-chan struct{}) (string, error) 
 		fmt.Sprintf("port=%d", c.Port),
 	}
 
-	if c.SSLMode != "" {
-		connSlice = append(connSlice, fmt.Sprintf("sslmode=%s", c.SSLMode))
-	}
 	if c.DatabaseName != "" {
 		connSlice = append(connSlice, fmt.Sprintf("dbname=%s", c.DatabaseName))
 	}
 	if c.Password != "" {
 		connSlice = append(connSlice, fmt.Sprintf("password=%s", c.Password))
+	}
+
+	if c.SSLMode != "" {
+		connSlice = append(connSlice, fmt.Sprintf("sslmode=%s", c.SSLMode))
 	}
 
 	var (

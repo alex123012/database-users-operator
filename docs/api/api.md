@@ -8,11 +8,10 @@
 
 Package v1alpha1 contains API Schema definitions for the  v1alpha1 API group
 
+
 ### Resource Types
 - [Database](#database)
-- [DatabaseBinding](#databasebinding)
 - [Privileges](#privileges)
-- [PrivilegesBinding](#privilegesbinding)
 - [User](#user)
 
 
@@ -33,37 +32,21 @@ Database is the Schema for the databases API.
 | `spec` _[DatabaseSpec](#databasespec)_ |  |
 
 
-#### DatabaseBinding
+#### DatabaseRef
 
 
 
-DatabaseBinding is the Schema for the databasebindings API.
 
-
-
-| Field | Description |
-| --- | --- |
-| `apiVersion` _string_ | `databaseusersoperator.com/v1alpha1`
-| `kind` _string_ | `DatabaseBinding`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[DatabaseBindingSpec](#databasebindingspec)_ |  |
-
-
-#### DatabaseBindingSpec
-
-
-
-DatabaseBindingSpec defines the desired state of DatabaseBinding.
 
 _Appears in:_
-- [DatabaseBinding](#databasebinding)
+- [UserSpec](#userspec)
 
 | Field | Description |
 | --- | --- |
-| `database` _string_ | Database references to the Database that will be used to connect to DB |
-| `user` _[NamespacedName](#namespacedname)_ | Users holds references to the objects the privileges applies to. |
-
-
+| `name` _[Name](#name)_ |  |
+| `passwordSecret` _[Secret](#secret)_ |  |
+| `createdSecret` _[NamespacedName](#namespacedname)_ |  |
+| `privileges` _[Name](#name) array_ |  |
 
 
 #### DatabaseSpec
@@ -101,6 +84,20 @@ _Appears in:_
 | `usersHostname` _string_ | The hostname from which this user will connect By default "*" will be used (So users would be "<user>@*") |
 
 
+#### Name
+
+
+
+
+
+_Appears in:_
+- [DatabaseRef](#databaseref)
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ | resource name |
+
+
 #### NamespacedName
 
 
@@ -108,9 +105,8 @@ _Appears in:_
 
 
 _Appears in:_
-- [DatabaseBindingSpec](#databasebindingspec)
+- [DatabaseRef](#databaseref)
 - [PostgreSQLConfig](#postgresqlconfig)
-- [PrivilegesBindingSpec](#privilegesbindingspec)
 - [Secret](#secret)
 
 | Field | Description |
@@ -183,39 +179,6 @@ Privileges is the Schema for the privileges API.
 | `privileges` _[PrivilegeSpec](#privilegespec) array_ |  |
 
 
-#### PrivilegesBinding
-
-
-
-PrivilegesBinding is the Schema for the privilegesbindings API.
-
-
-
-| Field | Description |
-| --- | --- |
-| `apiVersion` _string_ | `databaseusersoperator.com/v1alpha1`
-| `kind` _string_ | `PrivilegesBinding`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[PrivilegesBindingSpec](#privilegesbindingspec)_ |  |
-
-
-#### PrivilegesBindingSpec
-
-
-
-PrivilegesBindingSpec defines the desired state of PrivilegesBinding.
-
-_Appears in:_
-- [PrivilegesBinding](#privilegesbinding)
-
-| Field | Description |
-| --- | --- |
-| `databaseBindings` _[NamespacedName](#namespacedname) array_ | DatabaseBinding references to the DatabaseBinding that will be used to apply privileges to user in a particular database |
-| `privileges` _[NamespacedName](#namespacedname)_ | List of database privileges that will be applied to user. If user already exists in database - all it privileges will be synchronized with this list (all privileges that are not defined will be revoked). |
-
-
-
-
 #### Secret
 
 
@@ -223,9 +186,9 @@ _Appears in:_
 Secret is a reference for kubernetes secret.
 
 _Appears in:_
+- [DatabaseRef](#databaseref)
 - [MySQLConfig](#mysqlconfig)
 - [PostgreSQLConfig](#postgresqlconfig)
-- [User](#user)
 
 | Field | Description |
 | --- | --- |
@@ -240,8 +203,7 @@ _Appears in:_
 
 
 _Appears in:_
-- [DatabaseBindingStatus](#databasebindingstatus)
-- [PrivilegesBindingStatus](#privilegesbindingstatus)
+- [UserStatus](#userstatus)
 
 | Field | Description |
 | --- | --- |
@@ -262,6 +224,22 @@ User is the Schema for the users API.
 | `apiVersion` _string_ | `databaseusersoperator.com/v1alpha1`
 | `kind` _string_ | `User`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.26/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `passwordSecret` _[Secret](#secret)_ |  |
+| `spec` _[UserSpec](#userspec)_ |  |
+
+
+#### UserSpec
+
+
+
+UserSpec defines the desired state of User.
+
+_Appears in:_
+- [User](#user)
+
+| Field | Description |
+| --- | --- |
+| `databases` _[DatabaseRef](#databaseref) array_ |  |
+
+
 
 
