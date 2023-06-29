@@ -24,14 +24,13 @@ type PrivilegeType string
 
 // PrivilegesSpec defines the desired state of Privileges.
 type PrivilegeSpec struct {
-	// Privilege is role name or PrivilegeType
+	// Privilege is role name or PrivilegeType, required.
 	Privilege PrivilegeType `json:"privilege"`
 
-	// if used PrivilegeType from PrivilegeTypeTable in Privilege field
-	// specify object to give Privilege to in database
+	// In database object to give privileges to, not required.
 	On string `json:"on,omitempty"`
 
-	// If Privilege is database specific - this field will be used to determine which db to use
+	// If Privilege is database specific - this field will be used to determine which db to use, not required.
 	Database string `json:"database,omitempty"`
 }
 
@@ -43,6 +42,7 @@ type Privileges struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
+	// List of privileges, required.
 	Privileges []PrivilegeSpec `json:"privileges,omitempty"`
 }
 

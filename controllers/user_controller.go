@@ -194,7 +194,9 @@ func (r *UserReconciler) databaseUserApply(ctx context.Context, db database.Data
 }
 
 func (r *UserReconciler) databaseUserDelete(ctx context.Context, db database.Database, user *v1alpha1.User, dbRef v1alpha1.DatabaseRef, privileges []v1alpha1.PrivilegeSpec, _ logr.Logger) error {
-	defer r.Delete(ctx, newSecret(dbRef.CreatedSecret.ToNamespacedName(), nil))
+	defer func() {
+		_ = r.Delete(ctx, newSecret(dbRef.CreatedSecret.ToNamespacedName(), nil))
+	}()
 
 	if err := db.RevokePrivileges(ctx, user.Name, privileges); err != nil {
 		return err

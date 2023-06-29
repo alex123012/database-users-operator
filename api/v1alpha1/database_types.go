@@ -30,15 +30,15 @@ const (
 
 // DatabaseSpec defines the desired state of Database.
 type DatabaseSpec struct {
-	// Type of database to connect, required
+	// Type of database to connect (Currently it is PostgreSQL and MySQL), required
 	Type DatabaseType `json:"databaseType"`
 
 	// Config for connecting for PostgreSQL compatible databases, not required.
-	// required if DatabaseType equals to "PostgreSQL"
+	// required if DatabaseType equals to "PostgreSQL".
 	PostgreSQL PostgreSQLConfig `json:"postgreSQL,omitempty"`
 
 	// Config for connecting for MySQL compatible databases, not required.
-	// required if DatabaseType equals to "MySQL"
+	// required if DatabaseType equals to "MySQL".
 	MySQL MySQLConfig `json:"mySQL,omitempty"`
 }
 
@@ -56,7 +56,7 @@ const (
 // PostgreSQLConfig is config that will be used by operator to connect to PostgreSQL compatible databases.
 type PostgreSQLConfig struct {
 	// Full DNS name/ip for database to use, required.
-	// If K8S service is used to connect - provide host
+	// If K8S service is used to connect - provide full dns name
 	// as <db-service-name>.<db-service-namespace>.svc.cluster.local
 	// refer to --host flag in https://www.postgresql.org/docs/current/app-psql.html
 	Host string `json:"host"`
@@ -109,7 +109,7 @@ type MySQLConfig struct {
 	// refer to --host flag in https://dev.mysql.com/doc/refman/8.0/en/connection-options.html
 	Host string `json:"host"`
 
-	// k8s-service/database port to connect to execute queries, defaults to 5432.
+	// k8s-service/database port to connect to execute queries, defaults to 3306.
 	// refer to --port flag in https://dev.mysql.com/doc/refman/8.0/en/connection-options.html
 	Port int `json:"port"`
 
@@ -117,7 +117,7 @@ type MySQLConfig struct {
 	// see https://dev.mysql.com/doc/refman/8.0/en/connecting.html.
 	DatabaseName string `json:"databaseName,omitempty"`
 
-	// The MySQL user account to provide for the authentication process.
+	// The MySQL user account to provide for the authentication process, defaults to "mysql".
 	// It must have at least CREATE ROLE privilege (if you won't provide superuser acess to users)
 	// or database superuser role if you think you'll be needed to give some users database superuser privileges
 	// refer to --user flag in https://dev.mysql.com/doc/refman/8.0/en/connection-options.html
@@ -128,7 +128,7 @@ type MySQLConfig struct {
 	// refer to --password flag in https://dev.mysql.com/doc/refman/8.0/en/connection-options.html
 	PasswordSecret Secret `json:"passwordSecret,omitempty"`
 
-	// The hostname from which this user will connect
+	// The hostname from which created users will connect
 	// By default "*" will be used (So users would be "<user>@*")
 	UsersHostname string `json:"usersHostname"`
 }

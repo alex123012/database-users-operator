@@ -23,16 +23,22 @@ import (
 
 // UserSpec defines the desired state of User.
 type UserSpec struct {
+	// List of databases, where user needs to be created with configs for it.
 	Databases []DatabaseRef `json:"databases"`
 }
 
 type DatabaseRef struct {
+	// The name of the Database CR to create user in, required.
 	Name string `json:"name"`
 
+	// Reference to secret with password for user in the database, not required.
 	PasswordSecret Secret `json:"passwordSecret,omitempty"`
 
+	// If operator would create data for user (for example for postgres with sslMode=="verify-full"),
+	// it is reference to non-existed Secret, that will be created during user creation in the database, not required.
 	CreatedSecret NamespacedName `json:"createdSecret,omitempty"`
 
+	// List of references to Privileges CR, that will be applied to created user in the database, required.
 	Privileges []Name `json:"privileges"`
 }
 
