@@ -36,9 +36,15 @@ spec:
             description: UserSpec defines the desired state of User.
             properties:
               databases:
+                description: List of databases, where user needs to be created with
+                  configs for it.
                 items:
                   properties:
                     createdSecret:
+                      description: If operator would create data for user (for example
+                        for postgres with sslMode=="verify-full"), it is reference
+                        to non-existed Secret, that will be created during user creation
+                        in the database, not required.
                       properties:
                         name:
                           description: resource name
@@ -51,9 +57,12 @@ spec:
                       - namespace
                       type: object
                     name:
+                      description: The name of the Database CR to create user in,
+                        required.
                       type: string
                     passwordSecret:
-                      description: Secret is a reference for kubernetes secret.
+                      description: Reference to secret with password for user in the
+                        database, not required.
                       properties:
                         key:
                           description: Kubernetes secret key with data
@@ -76,6 +85,8 @@ spec:
                       - secret
                       type: object
                     privileges:
+                      description: List of references to Privileges CR, that will
+                        be applied to created user in the database, required.
                       items:
                         properties:
                           name:

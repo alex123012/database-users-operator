@@ -33,19 +33,19 @@ spec:
           metadata:
             type: object
           privileges:
+            description: List of privileges, required.
             items:
               description: PrivilegesSpec defines the desired state of Privileges.
               properties:
                 database:
                   description: If Privilege is database specific - this field will
-                    be used to determine which db to use
+                    be used to determine which db to use, not required.
                   type: string
                 "on":
-                  description: if used PrivilegeType from PrivilegeTypeTable in Privilege
-                    field specify object to give Privilege to in database
+                  description: In database object to give privileges to, not required.
                   type: string
                 privilege:
-                  description: Privilege is role name or PrivilegeType
+                  description: Privilege is role name or PrivilegeType, required.
                   type: string
               required:
               - privilege
