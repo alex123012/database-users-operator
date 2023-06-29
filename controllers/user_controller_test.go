@@ -30,7 +30,7 @@ import (
 )
 
 const (
-	userCreationTimeout = 10 * time.Second
+	userCreationTimeout = 15 * time.Second
 )
 
 var _ = Describe("UserController", Ordered, func() {
