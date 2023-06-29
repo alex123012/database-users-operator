@@ -154,7 +154,7 @@ spec:
                   sslMode:
                     description: 'SSL mode that will be used to connect to PostgreSQL, defaults to "disable". Posssible values: "disable", "allow", "prefer", "require", "verify-ca", "verify-full". If SSL mode is "require", "verify-ca", "verify-full" - operator will generate K8S secret with SSL bundle (CA certificate, user certificate and user key) for User CR with same name as User CR. see https://www.postgresql.org/docs/current/libpq-ssl.html'
                     type: string
-                  sslSecrets:
+                  sslSecret:
                     description: Secret with SSL CA certificate ("ca.crt" key), user certificate ("tls.crt" key) and user key ("tls.key" key). If SSL Mode equals to "disable", "allow" or "prefer" field is not required. If SSL Mode equals to "require", "verify-ca" or "verify-full" - required. see https://www.postgresql.org/docs/current/libpq-ssl.html
                     properties:
                       name:

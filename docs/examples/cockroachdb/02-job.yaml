@@ -1,0 +1,60 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: prepare-example
+  namespace: test-database-users-operator
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: init
+        image: cockroachdb/cockroach:v23.1.4
+        command: ['/bin/bash']
+        args:
+          - '/opt/001_create_databases.sh'
+        volumeMounts:
+        - name: init
+          mountPath: /opt/001_create_databases.sh
+          subPath: 001_create_databases.sh
+        - name: certs
+          mountPath: /cockroach/cockroach-certs
+      volumes:
+      - name: init
+        configMap:
+          name: prepare-example-script
+      - name: certs
+        secret:
+          secretName: cockroachdb.client.root
+          items:
+          - key: ca.crt
+            path: ca.crt
+          - key: tls.crt
+            path: client.root.crt
+          - key: tls.key
+            path: client.root.key
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prepare-example-script
+  namespace: test-database-users-operator
+data:
+  001_create_databases.sh: |
+    #!/bin/bash
+    # set -ex
+
+    conn_str="cockroach sql --certs-dir /cockroach/cockroach-certs/ --user root --host cockroachdb-public"
+
+    while ! $conn_str -e 'SELECT 1' >/dev/null 2>&1; do
+      sleep 1
+      echo waiting cockroachdb
+    done
+
+    $conn_str -e "CREATE ROLE some_role;"
+    $conn_str -e "CREATE DATABASE some_db;"
+    $conn_str -d some_db -e "CREATE TABLE some_table (
+        code int
+    );"

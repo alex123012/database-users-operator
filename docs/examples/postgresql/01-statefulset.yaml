@@ -77,12 +77,13 @@ data:
     #!/bin/bash
     # set -ex
 
-    while ! psql -U ${POSTGRES_USER} -q -d postgres -c "SELECT 1"; do
+    psql_conn_str="psql -U ${POSTGRES_USER}"
+
+    while ! $psql_conn_str -q -d postgres -c "SELECT 1"; do
       sleep 1
       echo waiting postgres
     done
 
-    psql_conn_str="psql -U postgres"
     $psql_conn_str -c "CREATE ROLE some_role;"
     $psql_conn_str -c "CREATE DATABASE some_db;"
     $psql_conn_str -d some_db -c "CREATE TABLE some_table (

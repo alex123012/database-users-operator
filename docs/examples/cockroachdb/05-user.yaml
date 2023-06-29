@@ -1,0 +1,14 @@
+---
+apiVersion: databaseusersoperator.com/v1alpha1
+kind: User
+metadata:
+  name: john
+  namespace: test-database-users-operator
+spec:
+  databases:
+    - name: cockroachdb
+      createdSecret:
+        name: cockroachdb.client.john
+        namespace: test-database-users-operator
+      privileges:
+      - name: some-privileges

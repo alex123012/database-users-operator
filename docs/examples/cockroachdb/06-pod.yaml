@@ -1,0 +1,28 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: cockroachdb-john
+spec:
+  containers:
+  - name: cockroachdb
+    image: cockroachdb/cockroach:v23.1.4
+    command:
+      - /bin/bash
+    args:
+      - -c
+      - sleep 10000
+    volumeMounts:
+      - name: certs
+        mountPath: /cockroach/cockroach-certs
+  volumes:
+  - name: certs
+    secret:
+      secretName: cockroachdb.client.john
+      items:
+      - key: ca.crt
+        path: ca.crt
+      - key: tls.crt
+        path: client.john.crt
+      - key: tls.key
+        path: client.john.key
