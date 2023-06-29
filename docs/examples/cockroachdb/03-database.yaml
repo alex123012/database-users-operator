@@ -1,0 +1,21 @@
+---
+apiVersion: databaseusersoperator.com/v1alpha1
+kind: Database
+metadata:
+  name: cockroachdb
+spec:
+  databaseType: PostgreSQL
+  postgreSQL:
+    host: cockroachdb-public.test-database-users-operator.svc.cluster.local
+    port: 26257
+    user: root
+    sslMode: verify-full
+    sslSecret:
+      name: cockroachdb.client.root
+      namespace: test-database-users-operator
+    sslCaKey:
+      key: "ca.key"
+      secret:
+        name: cockroachdb.ca.key
+        namespace: test-database-users-operator
+

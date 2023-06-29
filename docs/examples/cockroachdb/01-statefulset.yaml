@@ -1,0 +1,163 @@
+# https://github.com/cockroachdb/cockroach/blob/master/cloud/kubernetes/bring-your-own-certs/cockroachdb-statefulset.yaml
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cockroachdb
+  namespace: test-database-users-operator
+  labels:
+    app: cockroachdb
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: cockroachdb
+  namespace: test-database-users-operator
+  labels:
+    app: cockroachdb
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: cockroachdb
+  namespace: test-database-users-operator
+  labels:
+    app: cockroachdb
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: cockroachdb
+subjects:
+- kind: ServiceAccount
+  name: cockroachdb
+  namespace: default
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cockroachdb-public
+  namespace: test-database-users-operator
+  labels:
+    app: cockroachdb
+spec:
+  ports:
+  - port: 26257
+    targetPort: 26257
+    name: grpc
+  - port: 8080
+    targetPort: 8080
+    name: http
+  selector:
+    app: cockroachdb
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cockroachdb
+  namespace: test-database-users-operator
+  labels:
+    app: cockroachdb
+  annotations:
+    service.alpha.kubernetes.io/tolerate-unready-endpoints: "true"
+spec:
+  ports:
+  - port: 26257
+    targetPort: 26257
+    name: grpc
+  - port: 8080
+    targetPort: 8080
+    name: http
+  publishNotReadyAddresses: true
+  clusterIP: None
+  selector:
+    app: cockroachdb
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: cockroachdb-budget
+  namespace: test-database-users-operator
+  labels:
+    app: cockroachdb
+spec:
+  selector:
+    matchLabels:
+      app: cockroachdb
+  maxUnavailable: 1
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: cockroachdb
+  namespace: test-database-users-operator
+spec:
+  serviceName: "cockroachdb"
+  replicas: 3
+  selector:
+    matchLabels:
+      app: cockroachdb
+  template:
+    metadata:
+      labels:
+        app: cockroachdb
+    spec:
+      serviceAccountName: cockroachdb
+      containers:
+      - name: cockroachdb
+        image: cockroachdb/cockroach:v23.1.4
+        ports:
+        - containerPort: 26257
+          name: grpc
+        - containerPort: 8080
+          name: http
+        readinessProbe:
+          httpGet:
+            path: "/health?ready=1"
+            port: http
+            scheme: HTTPS
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          failureThreshold: 2
+        volumeMounts:
+        - name: certs
+          mountPath: /cockroach/cockroach-certs
+        env:
+        - name: COCKROACH_CHANNEL
+          value: kubernetes-secure
+        - name: GOMAXPROCS
+          value: "1"
+        - name: MEMORY_LIMIT_MIB
+          value: "1024"
+        command:
+          - "/bin/bash"
+          - "-ecx"
+          # The use of qualified `hostname -f` is crucial:
+          # Other nodes aren't able to look up the unqualified hostname.
+          - exec
+            /cockroach/cockroach
+            start
+            --logtostderr
+            --certs-dir /cockroach/cockroach-certs
+            --advertise-host $(hostname -f)
+            --http-addr 0.0.0.0
+            --join cockroachdb-0.cockroachdb,cockroachdb-1.cockroachdb,cockroachdb-2.cockroachdb
+            --cache $(expr $MEMORY_LIMIT_MIB / 4)MiB
+            --max-sql-memory $(expr $MEMORY_LIMIT_MIB / 4)MiB
+      # No pre-stop hook is required, a SIGTERM plus some time is all that's
+      # needed for graceful shutdown of a node.
+      terminationGracePeriodSeconds: 60
+      volumes:
+      - name: certs
+        secret:
+          secretName: cockroachdb.node
+          defaultMode: 256
+  podManagementPolicy: Parallel
+  updateStrategy:
+    type: RollingUpdate

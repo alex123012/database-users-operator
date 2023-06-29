@@ -87,7 +87,7 @@ type PostgreSQLConfig struct {
 	// If SSL Mode equals to "disable", "allow" or "prefer" field is not required.
 	// If SSL Mode equals to "require", "verify-ca" or "verify-full" - required.
 	// see https://www.postgresql.org/docs/current/libpq-ssl.html
-	SSLCredentialsSecret NamespacedName `json:"sslSecrets,omitempty"`
+	SSLCredentialsSecret NamespacedName `json:"sslSecret,omitempty"`
 
 	// Secret with CA key for creating users certificates
 	// If SSL Mode equals to "disable", "allow" or "prefer" field is not required.
