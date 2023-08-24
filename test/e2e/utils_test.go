@@ -26,10 +26,15 @@ import (
 	"log"
 	"os"
 
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/kubernetes"
+	restclient "k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/remotecommand"
+	"k8s.io/kubectl/pkg/scheme"
 	controllerruntime "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -66,8 +71,9 @@ func createObjects(ctx context.Context, objects ...client.Object) error {
 }
 
 func deleteObjects(ctx context.Context, objects ...client.Object) error {
+	propPolicy := metav1.DeletePropagationOrphan
 	for _, obj := range objects {
-		if err := k8sClient.Delete(ctx, obj); err != nil {
+		if err := k8sClient.Delete(ctx, obj, &client.DeleteOptions{PropagationPolicy: &propPolicy}); err != nil {
 			return err
 		}
 	}
@@ -133,4 +139,70 @@ func decodeYAML(data []byte) ([]*unstructured.Unstructured, error) {
 
 		objects = append(objects, obj)
 	}
+}
+
+type PodExecer struct {
+	client    kubernetes.Interface
+	config    *restclient.Config
+	podName   string
+	namespace string
+	container string
+}
+
+func NewPodExecer(client kubernetes.Interface, config *restclient.Config, podName, namespace, container string) *PodExecer {
+	return &PodExecer{
+		client:    client,
+		config:    config,
+		podName:   podName,
+		namespace: namespace,
+		container: container,
+	}
+}
+
+func (p *PodExecer) execCmd(ctx context.Context, command []string, stdin io.Reader, stdout, stderr io.Writer) error {
+	opts := &v1.PodExecOptions{
+		Command:   command,
+		Container: p.container,
+		// TTY:       true,
+	}
+
+	if stdin != nil {
+		opts.Stdin = true
+	}
+
+	if stdout != nil {
+		opts.Stdout = true
+	}
+
+	if stderr != nil {
+		opts.Stderr = true
+	}
+
+	req := p.client.CoreV1().RESTClient().
+		Post().
+		Resource("pods").
+		Name(p.podName).
+		Namespace(namespace).
+		SubResource("exec").
+		VersionedParams(opts, scheme.ParameterCodec)
+
+	exec, err := remotecommand.NewSPDYExecutor(p.config, "POST", req.URL())
+	if err != nil {
+		return err
+	}
+
+	// oldState, err := terminal.MakeRaw(0)
+	// if err != nil {
+	// 	return err
+	// }
+	// defer terminal.Restore(0, oldState)
+
+	fmt.Println(req.URL())
+	err = exec.StreamWithContext(ctx, remotecommand.StreamOptions{
+		Stdin:  os.Stdin,
+		Stdout: os.Stdout,
+		Stderr: os.Stderr,
+		Tty:    true,
+	})
+	return err
 }
