@@ -21,7 +21,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/alex123012/database-users-operator/api/v1alpha1"
 	"github.com/alex123012/database-users-operator/pkg/database/postgresql"
@@ -45,7 +44,6 @@ func TestConfig_ConnString(t *testing.T) {
 		SSLUserKey   string
 	}
 	type args struct {
-		deleteFilesSigChan chan struct{}
 	}
 	tests := []struct {
 		name                   string
@@ -59,9 +57,7 @@ func TestConfig_ConnString(t *testing.T) {
 			name:                   "SSL config",
 			want:                   fmt.Sprintf("host=postgres user=user port=5432 dbname=dbname password=password sslmode=verify-full sslrootcert=%s/postgres-certs/postgres/dbname_user.ca sslcert=%s/postgres-certs/postgres/dbname_user.crt sslkey=%s/postgres-certs/postgres/dbname_user.key", home, home, home),
 			wantCreateCertificates: true,
-			args: args{
-				deleteFilesSigChan: make(chan struct{}),
-			},
+			args:                   args{},
 			fields: fields{
 				Host:         "postgres",
 				User:         "user",
@@ -95,11 +91,11 @@ func TestConfig_ConnString(t *testing.T) {
 		}
 
 		t.Run(tt.name, func(t *testing.T) {
-			defer close(tt.args.deleteFilesSigChan)
-
 			c := postgresql.NewConfig(tt.fields.Host, tt.fields.Port, tt.fields.User, tt.fields.Password, tt.fields.DatabaseName,
 				tt.fields.SSLMode, tt.fields.SSLCACert, tt.fields.SSLUserCert, tt.fields.SSLUserKey, "")
-			got, err := c.ConnString(tt.args.deleteFilesSigChan)
+			defer c.Close()
+
+			got, err := c.ConnString()
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Config.ConnString() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -119,8 +115,6 @@ func TestConfig_ConnString(t *testing.T) {
 				}
 			}
 		})
-		<-tt.args.deleteFilesSigChan
-		time.Sleep(time.Second) // sleep for defer function invoke
 
 		for _, f := range fs {
 			f := certPath(tt.fields.Host, tt.fields.DatabaseName, tt.fields.User, f.ext)

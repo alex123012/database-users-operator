@@ -36,10 +36,9 @@ import (
 )
 
 type Postgresql struct {
-	db         connection.Connection
-	config     *Config
-	logger     logr.Logger
-	cfgSigChan chan struct{}
+	db     connection.Connection
+	config *Config
+	logger logr.Logger
 }
 
 func NewPostgresql(c connection.Connection, config *Config, logger logr.Logger) *Postgresql {
@@ -51,8 +50,7 @@ func NewPostgresql(c connection.Connection, config *Config, logger logr.Logger) 
 }
 
 func (p *Postgresql) Connect(ctx context.Context) error {
-	p.cfgSigChan = make(chan struct{})
-	connString, err := p.config.ConnString(p.cfgSigChan)
+	connString, err := p.config.ConnString()
 	if err != nil {
 		return err
 	}
@@ -61,7 +59,7 @@ func (p *Postgresql) Connect(ctx context.Context) error {
 }
 
 func (p *Postgresql) Close(ctx context.Context) error {
-	defer close(p.cfgSigChan)
+	p.config.Close()
 	return p.db.Close(ctx)
 }
 
@@ -185,7 +183,7 @@ func prepareStatementForPrivilege(statement, arg, username, dbname, on string, p
 }
 
 func (p *Postgresql) genPostgresCertFromCA(userName string) (map[string]string, error) {
-	caKeyBlock, _ := pem.Decode([]byte(p.config.sslCAKey))
+	caKeyBlock, _ := pem.Decode([]byte(p.config.SSLCAKey))
 	caPrivKey, err := x509.ParsePKCS1PrivateKey(caKeyBlock.Bytes)
 	if err != nil {
 		return nil, err
