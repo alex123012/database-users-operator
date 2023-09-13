@@ -58,7 +58,7 @@ func newDatabase(ctx context.Context, conn connection.Connection, s v1alpha1.Dat
 	return db, err
 }
 
-func newPostgresql(ctx context.Context, conn connection.Connection, c v1alpha1.PostgreSQLConfig, client client.Client, logger logr.Logger) (*postgresql.Postgresql, error) {
+func newPostgresql(ctx context.Context, conn connection.Connection, c *v1alpha1.PostgreSQLConfig, client client.Client, logger logr.Logger) (*postgresql.Postgresql, error) {
 	sslData := make(map[string]string, 0)
 	var sslCAKey string
 	if c.SSLMode == v1alpha1.SSLModeREQUIRE || c.SSLMode == v1alpha1.SSLModeVERIFYCA || c.SSLMode == v1alpha1.SSLModeVERIFYFULL {
@@ -86,7 +86,7 @@ func newPostgresql(ctx context.Context, conn connection.Connection, c v1alpha1.P
 	return p, p.Connect(ctx)
 }
 
-func newMysql(ctx context.Context, conn connection.Connection, c v1alpha1.MySQLConfig, client client.Client, logger logr.Logger) (*mysql.Mysql, error) {
+func newMysql(ctx context.Context, conn connection.Connection, c *v1alpha1.MySQLConfig, client client.Client, logger logr.Logger) (*mysql.Mysql, error) {
 	password, err := passwordFromSecret(ctx, client, c.PasswordSecret)
 	if err != nil {
 		return nil, err

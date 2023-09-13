@@ -39,8 +39,8 @@ const (
 	defaultPostgresConnString = "pgx:host=test-postgres user=test-user port=5432 password=mysupersecretpass"
 )
 
-func defaultPostgresConfig() v1alpha1.PostgreSQLConfig {
-	return v1alpha1.PostgreSQLConfig{
+func defaultPostgresConfig() *v1alpha1.PostgreSQLConfig {
+	return &v1alpha1.PostgreSQLConfig{
 		Host: "test-postgres",
 		Port: 5432,
 		User: "test-user",
@@ -54,8 +54,8 @@ func defaultPostgresConfig() v1alpha1.PostgreSQLConfig {
 	}
 }
 
-func defaultMysqlConfig() v1alpha1.MySQLConfig {
-	return v1alpha1.MySQLConfig{
+func defaultMysqlConfig() *v1alpha1.MySQLConfig {
+	return &v1alpha1.MySQLConfig{
 		Host: "test-mysql",
 		Port: 3306,
 		User: "test-user",
@@ -103,11 +103,11 @@ func (t testDatabase) run(additionalObjects ...client.Object) {
 		user, secret, database, privileges = bundle(namespace, t.dbType)
 		switch t.dbType {
 		case v1alpha1.PostgreSQL:
-			database.Spec.PostgreSQL = t.dbConfig.(v1alpha1.PostgreSQLConfig)
+			database.Spec.PostgreSQL = t.dbConfig.(*v1alpha1.PostgreSQLConfig)
 		case v1alpha1.MySQL:
-			database.Spec.MySQL = t.dbConfig.(v1alpha1.MySQLConfig)
+			database.Spec.MySQL = t.dbConfig.(*v1alpha1.MySQLConfig)
 		default:
-			Expect(t.dbType).To(Equal("not supported db"))
+			Fail("not supported db")
 		}
 
 		createObjects(additionalObjects...)
@@ -125,7 +125,7 @@ func (t testDatabase) run(additionalObjects ...client.Object) {
 		time.Sleep(userCreationTimeout)
 		checkQueries(t.fakeDB, t.removeQueries)
 
-		By("Deleted users secret", func() {
+		By("Deleting users secret", func() {
 			if !t.creteUserSecret {
 				return
 			}
@@ -140,12 +140,24 @@ func (t testDatabase) run(additionalObjects ...client.Object) {
 
 		checkQueries(fakeDB, t.queries)
 
-		By("Created users secret", func() {
+		By("Creating users secret", func() {
 			if !t.creteUserSecret {
 				return
 			}
 			_, err := utils.Secret(ctx, types.NamespacedName{Namespace: namespace, Name: uniqueName("created-secret", t.dbType)}, k8sClient)
 			Expect(err).ToNot(HaveOccurred())
+		})
+
+		By("setting proper status", func() {
+			fetchedUser := &v1alpha1.User{}
+			Expect(k8sClient.Get(ctx, types.NamespacedName{Name: user.GetName()}, fetchedUser)).To(Succeed())
+			Expect(fetchedUser.Status).To(Equal(v1alpha1.UserStatus{Summary: v1alpha1.StatusSummary{Message: "Successfully created user in all specified databases", Ready: true}}))
+		})
+
+		By("adding event", func() {
+			events := &v1.EventList{}
+			Expect(k8sClient.List(ctx, events, &client.ListOptions{Namespace: namespace})).To(Succeed())
+			checkEvents(events, user, "SuccessfullyCreatedUser", "Successfully created user in all specified databases")
 		})
 	})
 }
@@ -166,7 +178,6 @@ func checkConnectionStrings(fakeDB *database.FakeDatabase, expected []string) {
 
 func checkQueries(fakeDB *database.FakeDatabase, expected []string) {
 	queries := fakeDB.Conn.Queries()
-	fmt.Println(queries)
 	By("Executed queries len", func() {
 		Expect(queries).To(HaveLen(len(expected)))
 	})
@@ -180,6 +191,18 @@ func checkQueries(fakeDB *database.FakeDatabase, expected []string) {
 			previousQueryOrder = currentQueryOrder
 		})
 	}
+}
+
+func checkEvents(events *v1.EventList, obj client.Object, reason, msg string) {
+	Expect(events.Items).NotTo(BeEmpty())
+	for _, event := range events.Items {
+		if event.InvolvedObject.Name == obj.GetName() && event.Reason == reason {
+			Expect(event.Message).To(Equal(msg))
+			return
+		}
+	}
+	failMsg := fmt.Sprintf("No event found for name=%s reason=%s", obj.GetName(), reason)
+	Fail(failMsg)
 }
 
 func waitForUsersReadiness(user *v1alpha1.User) {

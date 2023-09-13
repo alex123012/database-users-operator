@@ -91,6 +91,7 @@ var _ = BeforeSuite(func() {
 		Client:          mgr.GetClient(),
 		Scheme:          mgr.GetScheme(),
 		DatabaseCreator: fakeDB.DatabaseCreatorFunc(),
+		Recorder:        mgr.GetEventRecorderFor("database-users-operator"),
 	}).SetupWithManager(mgr)).To(Succeed())
 
 	go func() {

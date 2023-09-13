@@ -28,6 +28,7 @@ const (
 	MySQL      DatabaseType = "MySQL"
 )
 
+// +kubebuilder:validation:XValidation:rule="(self.databaseType == \"PostgreSQL\" && has(self.postgreSQL) && !has(self.mySQL)) || (self.databaseType == \"MySQL\" && has(self.mySQL) && !has(self.postgreSQL))",message="When .spec.databaseType is PostgreSQL use .spec.postgreSQL, When .spec.databaseType is MySQL use .spec.mySQL"
 // DatabaseSpec defines the desired state of Database.
 type DatabaseSpec struct {
 	// Type of database to connect (Currently it is PostgreSQL and MySQL), required
@@ -35,11 +36,11 @@ type DatabaseSpec struct {
 
 	// Config for connecting for PostgreSQL compatible databases, not required.
 	// required if DatabaseType equals to "PostgreSQL".
-	PostgreSQL PostgreSQLConfig `json:"postgreSQL,omitempty"`
+	PostgreSQL *PostgreSQLConfig `json:"postgreSQL,omitempty"`
 
 	// Config for connecting for MySQL compatible databases, not required.
 	// required if DatabaseType equals to "MySQL".
-	MySQL MySQLConfig `json:"mySQL,omitempty"`
+	MySQL *MySQLConfig `json:"mySQL,omitempty"`
 }
 
 type PostgresSSLMode string
@@ -53,6 +54,7 @@ const (
 	SSLModeVERIFYFULL PostgresSSLMode = "verify-full"
 )
 
+// +kubebuilder:validation:XValidation:rule="(self.sslMode in [\"disable\", \"allow\", \"prefer\"] && has(self.passwordSecret)) || (self.sslMode in [\"require\", \"verify-ca\", \"verify-full\"] && has(self.sslSecret) && has(self.sslCaKey))",message="When using .spec.postgreSQL.sslMode \"disable\", \"allow\" or \"prefer\" - set .spec.postgreSQL.passwordSecret"
 // PostgreSQLConfig is config that will be used by operator to connect to PostgreSQL compatible databases.
 type PostgreSQLConfig struct {
 	// Full DNS name/ip for database to use, required.
@@ -72,6 +74,8 @@ type PostgreSQLConfig struct {
 	// and https://www.postgresql.org/docs/current/sql-grant.html "GRANT on Roles"
 	User string `json:"user"`
 
+	// +kubebuilder:validation:XValidation:rule="self in [\"disable\", \"allow\", \"prefer\", \"require\", \"verify-ca\", \"verify-full\"]",message="Set valid .spec.postgreSQL.sslMode"
+	// +kubebuilder:default=disable
 	// SSL mode that will be used to connect to PostgreSQL, defaults to "disable".
 	// Posssible values: "disable", "allow", "prefer", "require", "verify-ca", "verify-full".
 	// If SSL mode is "require", "verify-ca", "verify-full" - operator will generate K8S secret with

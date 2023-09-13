@@ -114,6 +114,7 @@ spec:
                   ready:
                     type: boolean
                 required:
+                - message
                 - ready
                 type: object
             type: object

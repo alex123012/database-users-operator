@@ -31,21 +31,6 @@ BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 # databaseusersoperator.com/database-users-operator-bundle:$VERSION and databaseusersoperator.com/database-users-operator-catalog:$VERSION.
 IMAGE_TAG_BASE ?= alex123012.com/database-users-operator
 
-# BUNDLE_IMG defines the image:tag used for the bundle.
-# You can use it as an arg. (E.g make bundle-build BUNDLE_IMG=<some-registry>/<project-name-bundle>:<tag>)
-BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(VERSION)
-
-# BUNDLE_GEN_FLAGS are the flags passed to the operator-sdk generate bundle command
-BUNDLE_GEN_FLAGS ?= -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
-
-# USE_IMAGE_DIGESTS defines if images are resolved via tags or digests
-# You can enable this value if you would like to use SHA Based Digests
-# To enable set flag to true
-USE_IMAGE_DIGESTS ?= false
-ifeq ($(USE_IMAGE_DIGESTS), true)
-	BUNDLE_GEN_FLAGS += --use-image-digests
-endif
-
 # Image URL to use all building/pushing image targets
 IMG_REPO ?= ghcr.io/alex123012/database-users-operator
 IMG ?= $(IMG_REPO):v$(VERSION)
@@ -113,7 +98,7 @@ test: manifests generate fmt vet envtest ## Run tests.
 lint: golangci-lint ## Run linting against code
 	$(GOLANGCI_LINT) run
 
-fix: golangci-lint ## Run linting with fixes against code
+lint-fix: golangci-lint ## Run linting with fixes against code
 	$(GOLANGCI_LINT) run --fix
 
 api-docs: crd-ref-docs ## Generate API documentation
@@ -135,8 +120,16 @@ endif
 
 .PHONY: prepare-kind
 prepare-kind: git-commit-sha manifests ## Deploy operator to kind cluster
-	docker buildx build --load -t $(IMG_REPO):$(GIT_COMMIT) .
-	kind load docker-image --name=e2e-tests $(IMG_REPO):$(GIT_COMMIT)
+	if docker --version 2>/dev/null; then \
+		docker buildx build --load -t $(IMG_REPO):$(GIT_COMMIT) . ; \
+		kind load docker-image --name=e2e-tests $(IMG_REPO):$(GIT_COMMIT); \
+	elif podman --version 2>/dev/null; then \
+		podman build -t $(IMG_REPO):$(GIT_COMMIT) . ; \
+		podman save -o $(GIT_COMMIT).tar $(IMG_REPO):$(GIT_COMMIT); \
+		kind load image-archive --name=e2e-tests $(GIT_COMMIT).tar; \
+		rm $(GIT_COMMIT).tar; \
+	fi
+
 	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG_REPO):$(GIT_COMMIT)
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}

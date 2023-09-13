@@ -52,5 +52,5 @@ func (n Name) ToNamespacedName() types.NamespacedName {
 
 type StatusSummary struct {
 	Ready   bool   `json:"ready"`
-	Message string `json:"message,omitempty"`
+	Message string `json:"message"`
 }
