@@ -96,7 +96,7 @@ func createUserQuery(username, password string) (string, connection.LogInfo) {
 func (p *Postgresql) DeleteUser(ctx context.Context, username string) error {
 	// TODO (alex123012): use gorm.Statement, refer to https://gorm.io/docs/sql_builder.html#Clauses
 	query := deleteUserQuery(username)
-	return p.db.Exec(ctx, connection.EnableLogger, query)
+	return ignoreNotExists(p.db.Exec(ctx, connection.EnableLogger, query))
 }
 
 func deleteUserQuery(username string) string {
@@ -111,7 +111,7 @@ func (p *Postgresql) ApplyPrivileges(ctx context.Context, username string, privi
 }
 
 func (p *Postgresql) RevokePrivileges(ctx context.Context, username string, privileges []v1alpha1.PrivilegeSpec) error {
-	return p.privilegesProcessor(ctx, username, privileges, "REVOKE", "FROM")
+	return ignoreNotExists(p.privilegesProcessor(ctx, username, privileges, "REVOKE", "FROM"))
 }
 
 func (p *Postgresql) privilegesProcessor(ctx context.Context, username string, privileges []v1alpha1.PrivilegeSpec, statement, arg string) error {

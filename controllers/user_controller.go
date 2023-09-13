@@ -28,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -40,6 +41,7 @@ import (
 
 const (
 	userFinalizer = "user.databaseusersoperator.com/finalizer"
+	successMsg    = "Successfully created user in all specified databases"
 )
 
 var ErrDatabaseConnect = errors.New("can't connect to database")
@@ -51,6 +53,7 @@ type UserReconciler struct {
 	client.Client
 	Scheme          *runtime.Scheme
 	DatabaseCreator databaseCreator
+	Recorder        record.EventRecorder
 }
 
 //+kubebuilder:rbac:groups=databaseusersoperator.com,resources=users,verbs=get;list;watch;create;update;patch;delete
@@ -59,6 +62,7 @@ type UserReconciler struct {
 // +kubebuilder:rbac:groups=databaseusersoperator.com,resources=databases,verbs=get;list;watch
 // +kubebuilder:rbac:groups=databaseusersoperator.com,resources=privileges,verbs=get;list;watch
 // +kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=core,resources=events,verbs=create;patch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -73,19 +77,43 @@ func (r *UserReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, err
 	}
 
+	deleting, err := r.reconcile(ctx, user, logger)
+	if err != nil {
+		if deleting {
+			r.addEvent(user, true, "ErrorCreatingUser", err.Error())
+			return ctrl.Result{}, err
+		}
+		r.addEvent(user, true, "ErrorCreatingUser", err.Error())
+		return ctrl.Result{}, r.setStatus(ctx, user, v1alpha1.UserStatus{
+			Summary: v1alpha1.StatusSummary{Ready: false, Message: err.Error()},
+		})
+	}
+
+	if !user.Status.Summary.Ready && !deleting {
+		r.addEvent(user, false, "SuccessfullyCreatedUser", successMsg)
+		err = r.setStatus(ctx, user, v1alpha1.UserStatus{
+			Summary: v1alpha1.StatusSummary{Ready: true, Message: successMsg},
+		})
+	}
+	return ctrl.Result{}, err
+}
+
+func (r *UserReconciler) reconcile(ctx context.Context, user *v1alpha1.User, logger logr.Logger) (bool, error) {
+	deleting := false
 	// Check if the resource is marked to be deleted, which is
 	// indicated by the deletion timestamp being set.
 	if user.GetDeletionTimestamp() != nil {
+		deleting = true
 		logger.Info("Received deletion event")
 		if !controllerutil.ContainsFinalizer(user, userFinalizer) {
-			return ctrl.Result{}, nil
+			return deleting, nil
 		}
 
 		// Process deletetion user logic
 		rec := r.databaseReconciler(user, true, logger)
 		for _, dbRef := range user.Spec.Databases {
 			if err := rec(ctx, dbRef); err != nil {
-				return ctrl.Result{}, err
+				return deleting, err
 			}
 		}
 		logger.Info("Successfully deleted user from all specified databases")
@@ -93,7 +121,7 @@ func (r *UserReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		// Remove finalizer. Once all finalizers have been
 		// removed, the object will be deleted.
 		controllerutil.RemoveFinalizer(user, userFinalizer)
-		return ctrl.Result{}, r.Update(ctx, user)
+		return deleting, r.Update(ctx, user)
 	}
 
 	if !controllerutil.ContainsFinalizer(user, userFinalizer) {
@@ -101,7 +129,7 @@ func (r *UserReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		logger.Info("Setting finalizer for resource")
 		controllerutil.AddFinalizer(user, userFinalizer)
 		if err := r.Update(ctx, user); err != nil {
-			return ctrl.Result{}, err
+			return deleting, err
 		}
 	}
 
@@ -109,21 +137,27 @@ func (r *UserReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	rec := r.databaseReconciler(user, false, logger)
 	for _, dbRef := range user.Spec.Databases {
 		if err := rec(ctx, dbRef); err != nil {
-			return ctrl.Result{}, err
+			return deleting, err
 		}
 	}
 
-	logger.Info("Successfully created user in all specified databases")
+	logger.Info(successMsg)
 
-	if !user.Status.Summary.Ready {
-		user.Status.Summary = v1alpha1.StatusSummary{
-			Ready:   true,
-			Message: "",
-		}
-		err = r.Status().Update(ctx, user)
+	return deleting, nil
+}
+
+func (r *UserReconciler) setStatus(ctx context.Context, user *v1alpha1.User, status v1alpha1.UserStatus) error {
+	user.Status = status
+	return r.Status().Update(ctx, user)
+}
+
+func (r *UserReconciler) addEvent(user *v1alpha1.User, warn bool, reason, message string) {
+	eventType := v1.EventTypeNormal
+	if warn {
+		eventType = v1.EventTypeWarning
 	}
 
-	return ctrl.Result{}, err
+	r.Recorder.Event(user, eventType, reason, message)
 }
 
 func (r *UserReconciler) databaseReconciler(user *v1alpha1.User, deleteRequest bool, logger logr.Logger) func(ctx context.Context, dbRef v1alpha1.DatabaseRef) error {

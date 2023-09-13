@@ -170,6 +170,7 @@ spec:
                     - secret
                     type: object
                   sslMode:
+                    default: disable
                     description: 'SSL mode that will be used to connect to PostgreSQL,
                       defaults to "disable". Posssible values: "disable", "allow",
                       "prefer", "require", "verify-ca", "verify-full". If SSL mode
@@ -177,6 +178,10 @@ spec:
                       K8S secret with SSL bundle (CA certificate, user certificate
                       and user key) for User CR with same name as User CR. see https://www.postgresql.org/docs/current/libpq-ssl.html'
                     type: string
+                    x-kubernetes-validations:
+                    - message: Set valid .spec.postgreSQL.sslMode
+                      rule: self in ["disable", "allow", "prefer", "require", "verify-ca",
+                        "verify-full"]
                   sslSecret:
                     description: Secret with SSL CA certificate ("ca.crt" key), user
                       certificate ("tls.crt" key) and user key ("tls.key" key). If
@@ -209,9 +214,21 @@ spec:
                 - sslMode
                 - user
                 type: object
+                x-kubernetes-validations:
+                - message: When using .spec.postgreSQL.sslMode "disable", "allow"
+                    or "prefer" - set .spec.postgreSQL.passwordSecret
+                  rule: (self.sslMode in ["disable", "allow", "prefer"] && has(self.passwordSecret))
+                    || (self.sslMode in ["require", "verify-ca", "verify-full"] &&
+                    has(self.sslSecret) && has(self.sslCaKey))
             required:
             - databaseType
             type: object
+            x-kubernetes-validations:
+            - message: When .spec.databaseType is PostgreSQL use .spec.postgreSQL,
+                When .spec.databaseType is MySQL use .spec.mySQL
+              rule: (self.databaseType == "PostgreSQL" && has(self.postgreSQL) &&
+                !has(self.mySQL)) || (self.databaseType == "MySQL" && has(self.mySQL)
+                && !has(self.postgreSQL))
         type: object
     served: true
     storage: true

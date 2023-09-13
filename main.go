@@ -92,6 +92,7 @@ func main() {
 		Client:          mgr.GetClient(),
 		Scheme:          mgr.GetScheme(),
 		DatabaseCreator: database.NewDatabase,
+		Recorder:        mgr.GetEventRecorderFor("database-users-operator"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "User")
 		os.Exit(1)

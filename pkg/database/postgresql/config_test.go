@@ -43,12 +43,10 @@ func TestConfig_ConnString(t *testing.T) {
 		SSLUserCert  string
 		SSLUserKey   string
 	}
-	type args struct {
-	}
+
 	tests := []struct {
 		name                   string
 		fields                 fields
-		args                   args
 		want                   string
 		wantErr                bool
 		wantCreateCertificates bool
@@ -57,7 +55,6 @@ func TestConfig_ConnString(t *testing.T) {
 			name:                   "SSL config",
 			want:                   fmt.Sprintf("host=postgres user=user port=5432 dbname=dbname password=password sslmode=verify-full sslrootcert=%s/postgres-certs/postgres/dbname_user.ca sslcert=%s/postgres-certs/postgres/dbname_user.crt sslkey=%s/postgres-certs/postgres/dbname_user.key", home, home, home),
 			wantCreateCertificates: true,
-			args:                   args{},
 			fields: fields{
 				Host:         "postgres",
 				User:         "user",

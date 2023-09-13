@@ -63,6 +63,17 @@ func isAlreadyExists(err error) bool {
 	return ProcessToPostgressError(err) == "42710"
 }
 
+func ignoreNotExists(err error) error {
+	if isNotExists(err) {
+		return nil
+	}
+	return err
+}
+
+func isNotExists(err error) bool {
+	return ProcessToPostgressError(err) == "42704"
+}
+
 const notAPostgresError string = "Not a postgres error"
 
 func ProcessToPostgressError(err error) string {
