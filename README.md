@@ -124,6 +124,14 @@ make undeploy
 
 Create issue or PR and tag `@alex123012`.
 
+To run e2e tests locally:
+```bash
+kind create cluster --name e2e-tests --image kindest/node:v1.2
+6.6
+make prepare-kind
+make run-e2e
+```
+
 ## How it works
 This project aims to follow the Kubernetes [Operator pattern](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/)
 
