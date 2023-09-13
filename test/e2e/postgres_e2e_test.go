@@ -89,7 +89,7 @@ var _ = Describe("PostgreSQL::E2E", Ordered, func() {
 			}
 		}, "30s", 1).Should(BeTrue(), "Expected User to be deleted")
 
-		// deleteObjectsFromYaml(ctx, "../../docs/examples/postgresql/02-database.yaml", "../../docs/examples/postgresql/03-privileges.yaml", "../../docs/examples/postgresql/01-statefulset.yaml")
+		deleteObjectsFromYaml(ctx, "../../docs/examples/postgresql/02-database.yaml", "../../docs/examples/postgresql/03-privileges.yaml", "../../docs/examples/postgresql/01-statefulset.yaml")
 	})
 
 	It("Creates postgres pod", func() {
