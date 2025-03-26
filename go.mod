@@ -1,10 +1,11 @@
 module github.com/alex123012/database-users-operator
 
 go 1.21
+toolchain go1.24.1
 
 require (
 	github.com/go-logr/logr v1.2.4
-	github.com/go-sql-driver/mysql v1.6.0
+	github.com/go-sql-driver/mysql v1.9.1
 	github.com/jackc/pgx/v5 v5.4.3
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/onsi/ginkgo/v2 v2.12.1
@@ -17,6 +18,7 @@ require (
 )
 
 require (
+	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
