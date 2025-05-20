@@ -1,6 +1,6 @@
 module github.com/alex123012/database-users-operator
 
-go 1.21
+go 1.22
 
 require (
 	github.com/go-logr/logr v1.2.4
@@ -9,7 +9,7 @@ require (
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/onsi/ginkgo/v2 v2.12.1
 	github.com/onsi/gomega v1.27.10
-	github.com/xo/dburl v0.14.2
+	github.com/xo/dburl v0.23.8
 	k8s.io/api v0.28.1
 	k8s.io/apimachinery v0.28.2
 	k8s.io/client-go v0.28.1
